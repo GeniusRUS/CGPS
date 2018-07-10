@@ -1,5 +1,27 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply plugin: 'com.jfrog.bintray'
+apply plugin: 'com.github.dcendents.android-maven'
+
+ext {
+    bintrayRepo = "CGPS"
+    bintrayName = "com.geniusrus.cgps"
+    libraryName = "coroutinesgps"
+
+    publishedGroupId = "com.geniusrus.cgps"
+    artifact = "cgps"
+    libraryVersion = "1.0.0"
+
+    libraryDescription = "Android location library on coroutines"
+    siteUrl = 'https://github.com/GeniusRUS/CGPS'
+    gitUrl = 'https://github.com/GeniusRUS/CGPS.git'
+    developerId = 'GeniusRUS'
+    developerName = 'Viktor Likhanov'
+    developerEmail = 'Gen1usRUS@yandex.ru'
+    licenseName = 'The Apache Software License, Version 2.0'
+    licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+    allLicenses = ["Apache-2.0"]
+}
 
 android {
     compileSdkVersion 27
@@ -52,6 +74,11 @@ task createJarRelease(type: Copy) {
     exclude '**/BuildConfig.class'
     exclude '**/R.class'
     exclude '**/R$*.class'
+}
+
+if (project.rootProject.file('local.properties').exists()) {
+    apply from: 'https://raw.githubusercontent.com/nuuneoi/JCenter/master/installv1.gradle'
+    apply from: 'https://raw.githubusercontent.com/nuuneoi/JCenter/master/bintrayv1.gradle'
 }
 
 kotlin {
