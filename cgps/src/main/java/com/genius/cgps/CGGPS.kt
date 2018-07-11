@@ -158,9 +158,9 @@ class CGGPS(private val context: Context) {
         NO_POWER(LocationRequest.PRIORITY_NO_POWER),
     }
 
-    private class LocationException(message: String): Exception(message)
-    private class LocationDisabledException: Exception("Location adapter turned off on device")
-    private class ServicesAvailabilityException: Exception("Google services is not available on this device")
+    public class LocationException(message: String): Exception(message)
+    public class LocationDisabledException: Exception("Location adapter turned off on device")
+    public class ServicesAvailabilityException: Exception("Google services is not available on this device")
 }
 
 @JvmName("awaitVoid")

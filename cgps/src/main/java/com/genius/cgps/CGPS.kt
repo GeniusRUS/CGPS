@@ -136,8 +136,8 @@ class CGPS(private val context: Context) {
         COARSE(Criteria.ACCURACY_COARSE, Criteria.POWER_MEDIUM),
     }
 
-    private class LocationException(message: String): Exception(message)
-    private class LocationDisabledException: Exception("Location adapter turned off on device")
+    public class LocationException(message: String): Exception(message)
+    public class LocationDisabledException: Exception("Location adapter turned off on device")
 }
 
 @Throws(IOException::class)
