@@ -16,6 +16,7 @@ If one of the conditions is not valid, then the corresponding exception is throw
 - SecurityException - if permissions (API >= 23) is not granted
 - TimeoutException - if location is not received in time (by default 5000ms)
 - LocationException - others exceptions
+- ServicesAvailabilityException - if Google Services not available on device
 
 To query the current location, the accuracy of the determination (Accuracy.*) and the maximum timeout of the operation
 
