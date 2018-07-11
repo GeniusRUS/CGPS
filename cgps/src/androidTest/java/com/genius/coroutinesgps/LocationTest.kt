@@ -5,6 +5,7 @@ import android.support.test.InstrumentationRegistry
 import android.support.test.rule.GrantPermissionRule
 import android.support.test.runner.AndroidJUnit4
 import com.genius.cgps.CGGPS
+import com.genius.cgps.CoroutineLocationListener
 import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.runBlocking
 import org.junit.Assert.*
@@ -50,7 +51,7 @@ class LocationTest {
     fun requestUpdates() {
         val locationList = ArrayList<Location>()
 
-        job = CGGPS(InstrumentationRegistry.getContext()).requestUpdates(object : CGGPS.CoroutineLocationListener {
+        job = CGGPS(InstrumentationRegistry.getContext()).requestUpdates(object : CoroutineLocationListener {
             override fun onLocationReceive(location: Location) {
                 locationList.add(location)
 
