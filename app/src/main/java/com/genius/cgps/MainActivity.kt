@@ -23,7 +23,7 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 
-class MainActivity : AppCompatActivity(), CGGPS.CoroutineLocationListener {
+class MainActivity : AppCompatActivity(), CoroutineLocationListener {
 
     private var updates: Job? = null
     private var currentStep = 0

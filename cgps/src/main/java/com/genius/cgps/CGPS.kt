@@ -2,12 +2,12 @@ package com.genius.cgps
 
 import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
+import android.content.Intent
 import android.location.*
 import android.os.Bundle
+import android.provider.Settings
 import android.support.annotation.IntRange
 import android.support.annotation.RequiresPermission
-import android.support.v4.content.ContextCompat
 import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.android.UI
 import java.io.IOException
@@ -21,14 +21,16 @@ class CGPS(private val context: Context) {
 
     private val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager?
 
-    @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class)
+    @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, ServicesAvailabilityException::class)
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_COARSE_LOCATION])
     suspend fun lastLocation(accuracy: Accuracy = Accuracy.COARSE) = suspendCoroutine<Location> { coroutine ->
         if (manager == null) {
             coroutine.resumeWithException(LocationException("Location manager not found"))
-        } else if (!isLocationEnabled()) {
+        } else if (!isGooglePlayServicesAvailable(context)) {
+            coroutine.resumeWithException(ServicesAvailabilityException())
+        } else if (!isLocationEnabled(manager)) {
             coroutine.resumeWithException(LocationDisabledException())
-        } else if (!checkPermission(true)) {
+        } else if (!checkPermission(context, true)) {
             coroutine.resumeWithException(SecurityException("Permissions for GPS was not given"))
         } else {
             val location = manager.getLastKnownLocation(manager.getBestProvider(getCriteria(accuracy), true))
@@ -40,14 +42,16 @@ class CGPS(private val context: Context) {
         }
     }
 
-    @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, TimeoutException::class)
+    @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, TimeoutException::class, ServicesAvailabilityException::class)
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION])
     suspend fun actualLocation(accuracy: Accuracy = Accuracy.COARSE, @IntRange(from = 0) timeout: Long = 5000L) = suspendCoroutine<Location> { coroutine ->
         if (manager == null) {
             coroutine.resumeWithException(LocationException("Location manager not found"))
-        } else if (!isLocationEnabled()) {
+        } else if (!isGooglePlayServicesAvailable(context)) {
+            coroutine.resumeWithException(ServicesAvailabilityException())
+        } else if (!isLocationEnabled(manager)) {
             coroutine.resumeWithException(LocationDisabledException())
-        } else if (!checkPermission(false)) {
+        } else if (!checkPermission(context, false)) {
             coroutine.resumeWithException(SecurityException("Permissions for GPS was not given"))
         } else {
             val listener = getLocationListener(coroutine)
@@ -59,8 +63,13 @@ class CGPS(private val context: Context) {
         }
     }
 
+    @Throws(ServicesAvailabilityException::class)
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION])
     fun requestUpdates(listener: CoroutineLocationListener, context: CoroutineContext = UI, accuracy: Accuracy = Accuracy.COARSE, @IntRange(from = 0) timeout: Long = 5000L, @IntRange(from = 0) interval: Long = 10000L) = Job().apply {
+        if (!isGooglePlayServicesAvailable(this@CGPS.context)) {
+            throw ServicesAvailabilityException()
+        }
+
         launch(parent = this) {
             while (true) {
                 launch(context = context, parent = this@apply) {
@@ -101,10 +110,6 @@ class CGPS(private val context: Context) {
         }
     }
 
-    fun isLocationEnabled() = manager?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) ?: false
-        || manager?.isProviderEnabled(LocationManager.GPS_PROVIDER) ?: false
-    //|| manager?.isProviderEnabled(LocationManager.PASSIVE_PROVIDER) ?: false
-
     private fun getCriteria(accuracy: Accuracy): Criteria {
         return Criteria().apply {
             setAccuracy(accuracy.accuracy)
@@ -120,25 +125,18 @@ class CGPS(private val context: Context) {
         }
     }
 
-    private fun checkPermission(isCoarse: Boolean) = if (isCoarse) {
-        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-    } else {
-        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-    }
-
-    interface CoroutineLocationListener {
-        fun onLocationReceive(location: Location)
-        fun onErrorReceive(error: Exception)
-    }
-
     enum class Accuracy(val accuracy: Int, val power: Int) {
         FINE(Criteria.ACCURACY_FINE, Criteria.POWER_HIGH),
         COARSE(Criteria.ACCURACY_COARSE, Criteria.POWER_MEDIUM),
     }
-
-    public class LocationException(message: String): Exception(message)
-    public class LocationDisabledException: Exception("Location adapter turned off on device")
 }
 
 @Throws(IOException::class)
 fun Location.toAddress(context: Context, locale: Locale = Locale.getDefault()): Address? = Geocoder(context, locale).getFromLocation(this.latitude, this.longitude, 1)[0]
+
+fun Context.openSettings() = startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+
+interface CoroutineLocationListener {
+    fun onLocationReceive(location: Location)
+    fun onErrorReceive(error: Exception)
+}

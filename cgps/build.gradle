@@ -10,7 +10,7 @@ ext {
 
     publishedGroupId = "com.geniusrus.cgps"
     artifact = "cgps"
-    libraryVersion = "1.1.0"
+    libraryVersion = "1.1.1"
 
     libraryDescription = "Android location library on coroutines"
     siteUrl = 'https://github.com/GeniusRUS/CGPS'

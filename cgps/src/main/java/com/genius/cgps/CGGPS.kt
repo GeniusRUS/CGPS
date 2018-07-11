@@ -3,10 +3,8 @@ package com.genius.cgps
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.*
-import android.provider.Settings
 import android.support.annotation.IntRange
 import android.support.annotation.RequiresPermission
 import android.support.v4.content.ContextCompat
@@ -32,9 +30,9 @@ class CGGPS(private val context: Context) {
             coroutine.completeExceptionally(LocationException("Location manager not found"))
         } else if (!isGooglePlayServicesAvailable(context)) {
             coroutine.completeExceptionally(ServicesAvailabilityException())
-        } else if (!isLocationEnabled()) {
+        } else if (!isLocationEnabled(locationManager)) {
             coroutine.completeExceptionally(LocationDisabledException())
-        } else if (!checkPermission(true)) {
+        } else if (!checkPermission(context, true)) {
             coroutine.completeExceptionally(SecurityException("Permissions for GPS was not given"))
         } else {
             val location = manager.lastLocation.await()
@@ -56,9 +54,9 @@ class CGGPS(private val context: Context) {
             coroutine.completeExceptionally(LocationException("Location manager not found"))
         } else if (!isGooglePlayServicesAvailable(context)) {
             coroutine.completeExceptionally(ServicesAvailabilityException())
-        } else if (!isLocationEnabled()) {
+        } else if (!isLocationEnabled(locationManager)) {
             coroutine.completeExceptionally(LocationDisabledException())
-        } else if (!checkPermission(false)) {
+        } else if (!checkPermission(context, false)) {
             coroutine.completeExceptionally(SecurityException("Permissions for GPS was not given"))
         } else {
             val listener = createLocationCallback(coroutine, null)
@@ -124,31 +122,11 @@ class CGGPS(private val context: Context) {
         }
     }
 
-    fun isGooglePlayServicesAvailable(context: Context): Boolean {
-        val googleApiAvailability = GoogleApiAvailability.getInstance()
-        val resultCode = googleApiAvailability.isGooglePlayServicesAvailable(context)
-        return resultCode == ConnectionResult.SUCCESS
-    }
-
-    fun isLocationEnabled() = locationManager?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) ?: false
-        || locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) ?: false
-
     private fun cancelWithTimeout(coroutine: CompletableDeferred<Location>, listener: LocationCallback, timeout: Long) {
         if (coroutine.isActive) {
             manager?.removeLocationUpdates(listener)
             coroutine.completeExceptionally(TimeoutException("Location timeout on $timeout ms"))
         }
-    }
-
-    private fun checkPermission(isCoarse: Boolean) = if (isCoarse) {
-        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-    } else {
-        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-    }
-
-    interface CoroutineLocationListener {
-        fun onLocationReceive(location: Location)
-        fun onErrorReceive(error: Exception)
     }
 
     enum class Accuracy(val accuracy: Int) {
@@ -157,16 +135,6 @@ class CGGPS(private val context: Context) {
         LOW_POWER(LocationRequest.PRIORITY_LOW_POWER),
         NO_POWER(LocationRequest.PRIORITY_NO_POWER),
     }
-
-    public class LocationException(message: String): Exception(message)
-    public class LocationDisabledException: Exception("Location adapter turned off on device")
-    public class ServicesAvailabilityException: Exception("Google services is not available on this device")
-}
-
-@JvmName("awaitVoid")
-suspend fun Task<Void>.await() = suspendCoroutine<Unit> { continuation ->
-    addOnSuccessListener { continuation.resume(Unit) }
-    addOnFailureListener { continuation.resumeWithException(it) }
 }
 
 suspend fun <T> Task<T>.await() = suspendCoroutine<T> { continuation ->
@@ -174,4 +142,21 @@ suspend fun <T> Task<T>.await() = suspendCoroutine<T> { continuation ->
     addOnFailureListener { continuation.resumeWithException(it) }
 }
 
-fun Context.openSettings() = startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+fun isGooglePlayServicesAvailable(context: Context): Boolean {
+    val googleApiAvailability = GoogleApiAvailability.getInstance()
+    val resultCode = googleApiAvailability.isGooglePlayServicesAvailable(context)
+    return resultCode == ConnectionResult.SUCCESS
+}
+
+internal fun checkPermission(context: Context, isCoarse: Boolean) = if (isCoarse) {
+    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+} else {
+    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+}
+
+internal fun isLocationEnabled(manager: LocationManager?) = manager?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) ?: false
+    || manager?.isProviderEnabled(LocationManager.GPS_PROVIDER) ?: false
+
+class LocationException(message: String): Exception(message)
+class LocationDisabledException: Exception("Location adapter turned off on device")
+class ServicesAvailabilityException: Exception("Google services is not available on this device")
