@@ -16,18 +16,22 @@ import com.google.android.gms.tasks.Task
 import java.util.concurrent.TimeoutException
 import kotlin.coroutines.experimental.suspendCoroutine
 import kotlinx.coroutines.experimental.*
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 
 class CGGPS(private val context: Context) {
 
     private val manager = LocationServices.getFusedLocationProviderClient(context)
     private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager?
 
-    @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class)
+    @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, ServicesAvailabilityException::class)
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_COARSE_LOCATION])
     suspend fun lastLocation(): Location {
         val coroutine = CompletableDeferred<Location>()
         if (locationManager == null) {
             coroutine.completeExceptionally(LocationException("Location manager not found"))
+        } else if (!isGooglePlayServicesAvailable(context)) {
+            coroutine.completeExceptionally(ServicesAvailabilityException())
         } else if (!isLocationEnabled()) {
             coroutine.completeExceptionally(LocationDisabledException())
         } else if (!checkPermission(true)) {
@@ -44,12 +48,14 @@ class CGGPS(private val context: Context) {
         return coroutine.await()
     }
 
-    @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, TimeoutException::class)
+    @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, TimeoutException::class, ServicesAvailabilityException::class)
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION])
     suspend fun actualLocation(accuracy: Accuracy = Accuracy.BALANCED, @IntRange(from = 0) timeout: Long = 5000L): Location {
         val coroutine = CompletableDeferred<Location>()
         if (locationManager == null) {
             coroutine.completeExceptionally(LocationException("Location manager not found"))
+        } else if (!isGooglePlayServicesAvailable(context)) {
+            coroutine.completeExceptionally(ServicesAvailabilityException())
         } else if (!isLocationEnabled()) {
             coroutine.completeExceptionally(LocationDisabledException())
         } else if (!checkPermission(false)) {
@@ -68,8 +74,13 @@ class CGGPS(private val context: Context) {
         return coroutine.await()
     }
 
+    @Throws(ServicesAvailabilityException::class)
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION])
     fun requestUpdates(listener: CoroutineLocationListener, accuracy: Accuracy = Accuracy.BALANCED, @IntRange(from = 0) timeout: Long = 5000L) = Job().apply {
+        if (!isGooglePlayServicesAvailable(context)) {
+            throw ServicesAvailabilityException()
+        }
+
         val locationListener = createLocationCallback(null, listener)
 
         requestLocationUpdates(locationListener, accuracy, timeout)
@@ -113,6 +124,12 @@ class CGGPS(private val context: Context) {
         }
     }
 
+    fun isGooglePlayServicesAvailable(context: Context): Boolean {
+        val googleApiAvailability = GoogleApiAvailability.getInstance()
+        val resultCode = googleApiAvailability.isGooglePlayServicesAvailable(context)
+        return resultCode == ConnectionResult.SUCCESS
+    }
+
     fun isLocationEnabled() = locationManager?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) ?: false
         || locationManager?.isProviderEnabled(LocationManager.GPS_PROVIDER) ?: false
 
@@ -143,6 +160,7 @@ class CGGPS(private val context: Context) {
 
     private class LocationException(message: String): Exception(message)
     private class LocationDisabledException: Exception("Location adapter turned off on device")
+    private class ServicesAvailabilityException: Exception("Google services is not available on this device")
 }
 
 @JvmName("awaitVoid")
