@@ -1,4 +1,4 @@
-package com.genius.coroutinesgps
+package com.genius.cgps
 
 import android.Manifest
 import android.content.Context

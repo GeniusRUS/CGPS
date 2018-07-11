@@ -1,1 +1,1 @@
-include ':app', ':coroutinesgps'
+include ':app', ':cgps'

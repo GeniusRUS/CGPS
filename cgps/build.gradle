@@ -6,7 +6,7 @@ apply plugin: 'com.github.dcendents.android-maven'
 ext {
     bintrayRepo = "CGPS"
     bintrayName = "com.geniusrus.cgps"
-    libraryName = "coroutinesgps"
+    libraryName = "cgps"
 
     publishedGroupId = "com.geniusrus.cgps"
     artifact = "cgps"

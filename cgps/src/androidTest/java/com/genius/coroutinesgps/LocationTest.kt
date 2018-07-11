@@ -4,6 +4,7 @@ import android.location.Location
 import android.support.test.InstrumentationRegistry
 import android.support.test.rule.GrantPermissionRule
 import android.support.test.runner.AndroidJUnit4
+import com.genius.cgps.CGGPS
 import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.runBlocking
 import org.junit.Assert.*
