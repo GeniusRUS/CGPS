@@ -1,6 +1,7 @@
 package com.genius.cgps
 
 import android.Manifest
+import android.content.Intent
 import android.location.Address
 import android.location.Location
 import android.os.Bundle
@@ -41,6 +42,14 @@ class MainActivity : AppCompatActivity(), CoroutineLocationListener {
         // Inflate the menu; this adds items to the action bar if it is present.
         menuInflater.inflate(R.menu.menu_main, menu)
         return true
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        handleResult(requestCode, resultCode, data) {
+            singleUpdate()
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -102,9 +111,9 @@ class MainActivity : AppCompatActivity(), CoroutineLocationListener {
             }
 
             val message = try {
-                val location = CGGPS(this@MainActivity).actualLocation()
-                val address = location.toAddress(this@MainActivity)
-                location.printInfo(address)
+                val location = CGGPS(this@MainActivity).actualLocationWithEnable()
+                val address = location?.toAddress(this@MainActivity)
+                location?.printInfo(address)
             } catch (e: Exception) {
                 Log.e("GPS ERROR", e.message, e)
                 e.message ?: "Empty error"

@@ -2,7 +2,9 @@ package com.genius.cgps
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.*
 import android.support.annotation.IntRange
@@ -16,10 +18,12 @@ import kotlin.coroutines.experimental.suspendCoroutine
 import kotlinx.coroutines.experimental.*
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.gms.common.api.ResolvableApiException
 
 class CGGPS(private val context: Context) {
 
     private val manager = LocationServices.getFusedLocationProviderClient(context)
+    private val settingsManager = LocationServices.getSettingsClient(context)
     private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager?
 
     @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, ServicesAvailabilityException::class)
@@ -72,6 +76,23 @@ class CGGPS(private val context: Context) {
         return coroutine.await()
     }
 
+    @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, TimeoutException::class, ServicesAvailabilityException::class)
+    @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION])
+    suspend fun actualLocationWithEnable(accuracy: Accuracy = Accuracy.BALANCED, requestCode: Int = 10414, @IntRange(from = 0) timeout: Long = 5000L): Location? {
+        val settingsRequest = LocationSettingsRequest.Builder()
+            .addLocationRequest(createRequest(accuracy, timeout, 1))
+            .build()
+
+        try {
+            settingsManager.checkLocationSettings(settingsRequest).await()
+        } catch (e: ResolvableApiException) {
+            e.startResolutionForResult(context as Activity, requestCode)
+            return null
+        }
+
+        return actualLocation(accuracy, timeout)
+    }
+
     @Throws(ServicesAvailabilityException::class)
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION])
     fun requestUpdates(listener: CoroutineLocationListener, accuracy: Accuracy = Accuracy.BALANCED, @IntRange(from = 0) timeout: Long = 5000L) = Job().apply {
@@ -90,15 +111,19 @@ class CGGPS(private val context: Context) {
 
     @SuppressLint("MissingPermission")
     private fun requestLocationUpdates(listener: LocationCallback, accuracy: Accuracy, timeout: Long, updates: Int = Integer.MAX_VALUE) {
-        val locationRequest = LocationRequest().apply {
+        val request = createRequest(accuracy, timeout, updates)
+
+        manager.requestLocationUpdates(request, listener, context.mainLooper)
+    }
+
+    private fun createRequest(accuracy: Accuracy, timeout: Long, updates: Int = Integer.MAX_VALUE): LocationRequest {
+        return LocationRequest().apply {
             numUpdates = updates
             interval = timeout
             maxWaitTime = timeout
             fastestInterval = timeout / 10
             priority = accuracy.accuracy
         }
-
-        manager.requestLocationUpdates(locationRequest, listener, context.mainLooper)
     }
 
     private fun createLocationCallback(coroutine: CompletableDeferred<Location>?, listener: CoroutineLocationListener?) = object : LocationCallback() {
@@ -134,6 +159,12 @@ class CGGPS(private val context: Context) {
         BALANCED(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY),
         LOW_POWER(LocationRequest.PRIORITY_LOW_POWER),
         NO_POWER(LocationRequest.PRIORITY_NO_POWER),
+    }
+}
+
+fun handleResult(requestCode: Int, resultCode: Int, data: Intent?, action: () -> Unit) {
+    if (resultCode == Activity.RESULT_OK) {
+        action.invoke()
     }
 }
 
