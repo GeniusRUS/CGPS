@@ -41,12 +41,21 @@ val location = CGGPS(context).actualLocation()
 ```kotlin
 val location = CGGPS(context).requestUpdates(listener)
 ```
-NOTE: This call is not suspend and just works like improved location update listener
+**NOTE**: This call is not suspend and just works like improved location update listener
+
+* Get actual location with enable GPS request
+```kotlin
+val location = CGGPS(context).actualLocationWithEnable()
+```
+**NOTE**: In onActivityResult you must call
+```
+handleResult(requestCode: Int, resultCode: Int, data: Intent?, action: () -> Unit)
+```
 
 ## Install
 Add to your .gradle file:
 ```gradle
-implementation 'com.geniusrus.cgps:cgps:1.0.0'
+implementation "com.geniusrus.cgps:cgps:$last_version"
 ```
 ## Sample
 The sample is on `app` module
