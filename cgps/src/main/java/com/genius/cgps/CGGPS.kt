@@ -5,20 +5,21 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.*
 import android.support.annotation.IntRange
 import android.support.annotation.RequiresPermission
 import android.support.v4.content.ContextCompat
-import com.google.android.gms.location.LocationServices
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.ResolvableApiException
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
 import java.util.concurrent.TimeoutException
 import kotlin.coroutines.experimental.suspendCoroutine
 import kotlinx.coroutines.experimental.*
-import com.google.android.gms.common.ConnectionResult
-import com.google.android.gms.common.GoogleApiAvailability
-import com.google.android.gms.common.api.ResolvableApiException
 
 class CGGPS(private val context: Context) {
 
@@ -85,9 +86,25 @@ class CGGPS(private val context: Context) {
 
         try {
             settingsManager.checkLocationSettings(settingsRequest).await()
-        } catch (e: ResolvableApiException) {
-            e.startResolutionForResult(context as Activity, requestCode)
-            return null
+        } catch (e: Exception) {
+            val statusCode = (e as? ApiException)?.statusCode
+            when (statusCode) {
+                LocationSettingsStatusCodes.RESOLUTION_REQUIRED -> {
+                    if (context is Activity) {
+                        try {
+                            val rae = e as ResolvableApiException
+                            rae.startResolutionForResult(context, requestCode)
+                            return null
+                        } catch (sie: IntentSender.SendIntentException) {
+                            throw LocationException("Cannot find activity for resolve GPS enable intent")
+                        }
+                    } else {
+                        throw LocationException("Received context is not Activity. Please call this method with Activity instance")
+                    }
+                }
+                null -> throw e
+                else -> throw LocationException("Undefined status code from the settings client: $statusCode")
+            }
         }
 
         return actualLocation(accuracy, timeout)
