@@ -1,6 +1,7 @@
 package com.genius.cgps
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.location.Address
 import android.location.Location
@@ -16,6 +17,8 @@ import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.android.UI
+import kotlinx.coroutines.experimental.channels.actor
+import kotlinx.coroutines.experimental.channels.consumeEach
 import kotlinx.coroutines.experimental.launch
 import java.io.BufferedWriter
 import java.io.File
@@ -24,7 +27,7 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 
-class MainActivity : AppCompatActivity(), CoroutineLocationListener {
+class MainActivity : AppCompatActivity() {
 
     private var updates: Job? = null
     private var currentStep = 0
@@ -78,30 +81,6 @@ class MainActivity : AppCompatActivity(), CoroutineLocationListener {
         }
     }
 
-    override fun onLocationReceive(location: Location) {
-        val message = """Step $currentStep in ${formatter.format(Date(location.time))}
-            |
-            |Provider: ${location.provider}
-            |Accuracy: ${location.accuracy}
-            |Coordinates: [${location.latitude}: ${location.longitude}]
-            |Speed: ${location.speed}
-            |Altitude: ${location.altitude}""".trimMargin()
-
-        tv_hello.text = message
-        logEvent(message)
-        currentStep++
-    }
-
-    override fun onErrorReceive(error: Exception) {
-        Log.e("GPS ERROR", error.message, error)
-        val message = """Step $currentStep in ${formatter.format(Date())}
-            |
-            |${error.message ?: "Empty message"}""".trimMargin()
-        tv_hello.text = message
-        logEvent(message)
-        currentStep++
-    }
-
     private fun singleUpdate() {
         launch(UI) {
             try {
@@ -123,7 +102,33 @@ class MainActivity : AppCompatActivity(), CoroutineLocationListener {
         }
     }
 
-    private fun locationUpdates() = CGGPS(this).requestUpdates(this)
+    @SuppressLint("MissingPermission")
+    private fun locationUpdates() = CGGPS(this).requestUpdates(actor(UI) {
+        channel.consumeEach { pair ->
+            pair.first?.let { location ->
+                val message = """Step $currentStep in ${formatter.format(Date(location.time))}
+            |
+            |Provider: ${location.provider}
+            |Accuracy: ${location.accuracy}
+            |Coordinates: [${location.latitude}: ${location.longitude}]
+            |Speed: ${location.speed}
+            |Altitude: ${location.altitude}""".trimMargin()
+
+                tv_hello.text = message
+                logEvent(message)
+                currentStep++
+            }
+            pair.second?.let { error ->
+                Log.e("GPS ERROR", error.message, error)
+                val message = """Step $currentStep in ${formatter.format(Date())}
+                |
+                |${error.message ?: "Empty message"}""".trimMargin()
+                    tv_hello.text = message
+                    logEvent(message)
+                    currentStep++
+            }
+        }
+    })
 
     private fun logEvent(text: String) {
         val logFile = File("sdcard/CGPS.txt")

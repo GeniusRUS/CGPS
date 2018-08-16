@@ -5,8 +5,9 @@ import android.support.test.InstrumentationRegistry
 import android.support.test.rule.GrantPermissionRule
 import android.support.test.runner.AndroidJUnit4
 import com.genius.cgps.CGGPS
-import com.genius.cgps.CoroutineLocationListener
 import kotlinx.coroutines.experimental.Job
+import kotlinx.coroutines.experimental.channels.actor
+import kotlinx.coroutines.experimental.channels.consumeEach
 import kotlinx.coroutines.experimental.runBlocking
 import org.junit.Assert.*
 import org.junit.Rule
@@ -49,20 +50,16 @@ class LocationTest {
 
     @Test
     fun requestUpdates() {
-        val locationList = ArrayList<Location>()
+        val locationList = ArrayList<Pair<Location?, Exception?>>()
 
-        job = CGGPS(InstrumentationRegistry.getContext()).requestUpdates(object : CoroutineLocationListener {
-            override fun onLocationReceive(location: Location) {
-                locationList.add(location)
+        job = CGGPS(InstrumentationRegistry.getContext()).requestUpdates(actor {
+            channel.consumeEach {
+                locationList.add(it)
 
                 if (locationList.size == 3) {
                     job.cancel()
                     assertTrue(true)
                 }
-            }
-
-            override fun onErrorReceive(error: Exception) {
-                fail(error.message ?: "Undefined reason")
             }
         })
     }

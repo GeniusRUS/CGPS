@@ -17,9 +17,13 @@ import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
+import kotlinx.coroutines.experimental.CompletableDeferred
+import kotlinx.coroutines.experimental.Job
+import kotlinx.coroutines.experimental.channels.*
+import kotlinx.coroutines.experimental.delay
+import kotlinx.coroutines.experimental.launch
 import java.util.concurrent.TimeoutException
 import kotlin.coroutines.experimental.suspendCoroutine
-import kotlinx.coroutines.experimental.*
 
 class CGGPS(private val context: Context) {
 
@@ -110,9 +114,10 @@ class CGGPS(private val context: Context) {
         return actualLocation(accuracy, timeout)
     }
 
+    @SuppressLint("MissingPermission")
     @Throws(ServicesAvailabilityException::class)
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION])
-    fun requestUpdates(listener: CoroutineLocationListener, accuracy: Accuracy = Accuracy.BALANCED, @IntRange(from = 0) timeout: Long = 5000L) = Job().apply {
+    fun requestUpdates(listener: SendChannel<Pair<Location?, Exception?>>, accuracy: Accuracy = Accuracy.BALANCED, @IntRange(from = 0) timeout: Long = 5000L) = Job().apply {
         if (!isGooglePlayServicesAvailable(context)) {
             throw ServicesAvailabilityException()
         }
@@ -143,24 +148,24 @@ class CGGPS(private val context: Context) {
         }
     }
 
-    private fun createLocationCallback(coroutine: CompletableDeferred<Location>?, listener: CoroutineLocationListener?) = object : LocationCallback() {
+    private fun createLocationCallback(coroutine: CompletableDeferred<Location>?, listener: SendChannel<Pair<Location?, Exception?>>?) = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult?) {
-            locationResult?.locations?.get(0)?.let {
+            locationResult?.locations?.getOrNull(0)?.let {
                 coroutine?.complete(it)
-                listener?.onLocationReceive(it)
+                listener?.offer(Pair(it, null))
             } ?: handleError()
         }
 
         override fun onLocationAvailability(locationStatus: LocationAvailability?) {
             if (locationStatus?.isLocationAvailable == false) {
                 coroutine?.completeExceptionally(LocationException("Location are unavailable with those settings"))
-                listener?.onErrorReceive(LocationException("Location are unavailable with those settings"))
+                listener?.offer(Pair(null, LocationException("Location are unavailable with those settings")))
             }
         }
 
         fun handleError() {
             coroutine?.completeExceptionally(LocationException("Location not found"))
-            listener?.onErrorReceive(LocationException("Location not found"))
+            listener?.offer(Pair(null, LocationException("Location not found")))
         }
     }
 

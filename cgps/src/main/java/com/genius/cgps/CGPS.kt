@@ -1,6 +1,7 @@
 package com.genius.cgps
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.location.*
@@ -10,6 +11,7 @@ import android.support.annotation.IntRange
 import android.support.annotation.RequiresPermission
 import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.android.UI
+import kotlinx.coroutines.experimental.channels.SendChannel
 import java.io.IOException
 import java.util.*
 import java.util.concurrent.TimeoutException
@@ -63,9 +65,10 @@ class CGPS(private val context: Context) {
         }
     }
 
+    @SuppressLint("MissingPermission")
     @Throws(ServicesAvailabilityException::class)
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION])
-    fun requestUpdates(listener: CoroutineLocationListener, context: CoroutineContext = UI, accuracy: Accuracy = Accuracy.COARSE, @IntRange(from = 0) timeout: Long = 5000L, @IntRange(from = 0) interval: Long = 10000L) = Job().apply {
+    fun requestUpdates(listener: SendChannel<Pair<Location?, Exception?>>, context: CoroutineContext = UI, accuracy: Accuracy = Accuracy.COARSE, @IntRange(from = 0) timeout: Long = 5000L, @IntRange(from = 0) interval: Long = 10000L) = Job().apply {
         if (!isGooglePlayServicesAvailable(this@CGPS.context)) {
             throw ServicesAvailabilityException()
         }
@@ -75,9 +78,9 @@ class CGPS(private val context: Context) {
                 launch(context = context, parent = this@apply) {
                     try {
                         val location = actualLocation(accuracy, timeout)
-                        listener.onLocationReceive(location)
+                        listener.offer(Pair(location, null))
                     } catch (e: Exception) {
-                        listener.onErrorReceive(e)
+                        listener.offer(Pair(null, e))
                     }
                 }
 
@@ -135,8 +138,3 @@ class CGPS(private val context: Context) {
 fun Location.toAddress(context: Context, locale: Locale = Locale.getDefault()): Address? = Geocoder(context, locale).getFromLocation(this.latitude, this.longitude, 1).firstOrNull()
 
 fun Context.openSettings() = startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-
-interface CoroutineLocationListener {
-    fun onLocationReceive(location: Location)
-    fun onErrorReceive(error: Exception)
-}
