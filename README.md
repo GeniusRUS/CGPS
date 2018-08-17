@@ -39,9 +39,8 @@ val location = CGGPS(context).actualLocation()
 
 * Get location updates
 ```kotlin
-val location = CGGPS(context).requestUpdates(listener)
+val location = CGGPS(context).requestUpdates(channel: SendChannel<Pair<Location?, Exception?>>)
 ```
-**NOTE**: This call is not suspend and just works like improved location update listener
 
 * Get actual location with enable GPS request
 ```kotlin
