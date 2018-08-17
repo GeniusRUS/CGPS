@@ -86,6 +86,8 @@ class CGPS(private val context: Context) {
 
                 delay(interval)
             }
+        }.invokeOnCompletion {
+            listener.close()
         }
     }
 
