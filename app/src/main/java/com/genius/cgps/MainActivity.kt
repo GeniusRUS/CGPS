@@ -15,8 +15,10 @@ import com.github.florent37.runtimepermission.kotlin.coroutines.experimental.ask
 
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
+import kotlinx.coroutines.experimental.Dispatchers
+import kotlinx.coroutines.experimental.GlobalScope
 import kotlinx.coroutines.experimental.Job
-import kotlinx.coroutines.experimental.android.UI
+import kotlinx.coroutines.experimental.android.Main
 import kotlinx.coroutines.experimental.channels.actor
 import kotlinx.coroutines.experimental.channels.consumeEach
 import kotlinx.coroutines.experimental.launch
@@ -61,7 +63,7 @@ class MainActivity : AppCompatActivity() {
         // as you specify a parent activity in AndroidManifest.xml.
         return when (item.itemId) {
             R.id.action_start -> {
-                launch {
+                GlobalScope.launch(Dispatchers.Main) {
                     try {
                         askPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     } catch (e: PermissionException) {
@@ -82,7 +84,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun singleUpdate() {
-        launch(UI) {
+        GlobalScope.launch(Dispatchers.Main) {
             try {
                 askPermission(Manifest.permission.ACCESS_FINE_LOCATION)
             } catch (e: PermissionException) {
@@ -103,7 +105,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     @SuppressLint("MissingPermission")
-    private fun locationUpdates() = CGGPS(this).requestUpdates(actor(UI) {
+    private fun locationUpdates() = CGGPS(this).requestUpdates(GlobalScope.actor(Dispatchers.Main) {
         channel.consumeEach { pair ->
             pair.first?.let { location ->
                 val message = """Step $currentStep in ${formatter.format(Date(location.time))}

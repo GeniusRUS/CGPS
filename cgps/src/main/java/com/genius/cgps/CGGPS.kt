@@ -17,11 +17,8 @@ import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.Task
-import kotlinx.coroutines.experimental.CompletableDeferred
-import kotlinx.coroutines.experimental.Job
+import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.channels.*
-import kotlinx.coroutines.experimental.delay
-import kotlinx.coroutines.experimental.launch
 import java.util.concurrent.TimeoutException
 import kotlin.coroutines.experimental.suspendCoroutine
 
@@ -72,7 +69,7 @@ class CGGPS(private val context: Context) {
 
             requestLocationUpdates(listener, accuracy, timeout, 1)
 
-            launch {
+            GlobalScope.launch {
                 delay(timeout)
                 cancelWithTimeout(coroutine, listener, timeout)
             }

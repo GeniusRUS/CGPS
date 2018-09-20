@@ -5,6 +5,7 @@ import android.support.test.InstrumentationRegistry
 import android.support.test.rule.GrantPermissionRule
 import android.support.test.runner.AndroidJUnit4
 import com.genius.cgps.CGGPS
+import kotlinx.coroutines.experimental.GlobalScope
 import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.channels.actor
 import kotlinx.coroutines.experimental.channels.consumeEach
@@ -52,7 +53,7 @@ class LocationTest {
     fun requestUpdates() {
         val locationList = ArrayList<Pair<Location?, Exception?>>()
 
-        job = CGGPS(InstrumentationRegistry.getContext()).requestUpdates(actor {
+        job = CGGPS(InstrumentationRegistry.getContext()).requestUpdates(GlobalScope.actor {
             channel.consumeEach {
                 locationList.add(it)
 

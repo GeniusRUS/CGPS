@@ -10,7 +10,7 @@ import android.provider.Settings
 import android.support.annotation.IntRange
 import android.support.annotation.RequiresPermission
 import kotlinx.coroutines.experimental.*
-import kotlinx.coroutines.experimental.android.UI
+import kotlinx.coroutines.experimental.android.Main
 import kotlinx.coroutines.experimental.channels.SendChannel
 import java.io.IOException
 import java.util.*
@@ -54,7 +54,7 @@ class CGPS(private val context: Context) {
         } else {
             val listener = getLocationListener(coroutine)
             manager.requestSingleUpdate(getCriteria(accuracy), listener, context.mainLooper)
-            launch {
+            GlobalScope.launch {
                 delay(timeout)
                 cancelWithTimeout(coroutine, listener, timeout)
             }
@@ -63,10 +63,10 @@ class CGPS(private val context: Context) {
 
     @SuppressLint("MissingPermission")
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION])
-    fun requestUpdates(listener: SendChannel<Pair<Location?, Exception?>>, context: CoroutineContext = UI, accuracy: Accuracy = Accuracy.COARSE, @IntRange(from = 0) timeout: Long = 5000L, @IntRange(from = 0) interval: Long = 10000L) = Job().apply {
-        launch(parent = this) {
+    fun requestUpdates(listener: SendChannel<Pair<Location?, Exception?>>, context: CoroutineContext = Dispatchers.Main, accuracy: Accuracy = Accuracy.COARSE, @IntRange(from = 0) timeout: Long = 5000L, @IntRange(from = 0) interval: Long = 10000L) = Job().apply {
+        GlobalScope.launch {
             while (true) {
-                launch(context = context, parent = this@apply) {
+                launch(context = context) {
                     try {
                         val location = actualLocation(accuracy, timeout)
                         listener.offer(Pair(location, null))
