@@ -33,17 +33,17 @@ class CGGPS(private val context: Context) {
     suspend fun lastLocation(): Location {
         val coroutine = CompletableDeferred<Location>()
         if (locationManager == null) {
-            coroutine.completeExceptionally(LocationException("Location manager not found"))
+            coroutine.cancel(LocationException("Location manager not found"))
         } else if (!isGooglePlayServicesAvailable(context)) {
-            coroutine.completeExceptionally(ServicesAvailabilityException())
+            coroutine.cancel(ServicesAvailabilityException())
         } else if (!isLocationEnabled(locationManager)) {
-            coroutine.completeExceptionally(LocationDisabledException())
+            coroutine.cancel(LocationDisabledException())
         } else if (!checkPermission(context, true)) {
-            coroutine.completeExceptionally(SecurityException("Permissions for GPS was not given"))
+            coroutine.cancel(SecurityException("Permissions for GPS was not given"))
         } else {
             val location = manager.lastLocation.await()
             if (location == null) {
-                coroutine.completeExceptionally(LocationException("Last location not found"))
+                coroutine.cancel(LocationException("Last location not found"))
             } else {
                 coroutine.complete(location)
             }
@@ -57,13 +57,13 @@ class CGGPS(private val context: Context) {
     suspend fun actualLocation(accuracy: Accuracy = Accuracy.BALANCED, @IntRange(from = 0) timeout: Long = 5000L): Location {
         val coroutine = CompletableDeferred<Location>()
         if (locationManager == null) {
-            coroutine.completeExceptionally(LocationException("Location manager not found"))
+            coroutine.cancel(LocationException("Location manager not found"))
         } else if (!isGooglePlayServicesAvailable(context)) {
-            coroutine.completeExceptionally(ServicesAvailabilityException())
+            coroutine.cancel(ServicesAvailabilityException())
         } else if (!isLocationEnabled(locationManager)) {
-            coroutine.completeExceptionally(LocationDisabledException())
+            coroutine.cancel(LocationDisabledException())
         } else if (!checkPermission(context, false)) {
-            coroutine.completeExceptionally(SecurityException("Permissions for GPS was not given"))
+            coroutine.cancel(SecurityException("Permissions for GPS was not given"))
         } else {
             val listener = createLocationCallback(coroutine, null)
 
@@ -156,13 +156,13 @@ class CGGPS(private val context: Context) {
 
         override fun onLocationAvailability(locationStatus: LocationAvailability?) {
             if (locationStatus?.isLocationAvailable == false) {
-                coroutine?.completeExceptionally(LocationException("Location are unavailable with those settings"))
+                coroutine?.cancel(LocationException("Location are unavailable with those settings"))
                 listener?.offer(Pair(null, LocationException("Location are unavailable with those settings")))
             }
         }
 
         fun handleError() {
-            coroutine?.completeExceptionally(LocationException("Location not found"))
+            coroutine?.cancel(LocationException("Location not found"))
             listener?.offer(Pair(null, LocationException("Location not found")))
         }
     }
@@ -170,7 +170,7 @@ class CGGPS(private val context: Context) {
     private fun cancelWithTimeout(coroutine: CompletableDeferred<Location>, listener: LocationCallback, timeout: Long) {
         if (coroutine.isActive) {
             manager?.removeLocationUpdates(listener)
-            coroutine.completeExceptionally(TimeoutException("Location timeout on $timeout ms"))
+            coroutine.cancel(TimeoutException("Location timeout on $timeout ms"))
         }
     }
 
