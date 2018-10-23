@@ -9,7 +9,6 @@ import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.*
 import android.support.annotation.IntRange
-import android.support.annotation.RequiresPermission
 import android.support.v4.content.ContextCompat
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.ResolvableApiException
@@ -29,7 +28,6 @@ class CGGPS(private val context: Context) {
     private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager?
 
     @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, ServicesAvailabilityException::class)
-    @RequiresPermission(allOf = [Manifest.permission.ACCESS_COARSE_LOCATION])
     suspend fun lastLocation(): Location {
         val coroutine = CompletableDeferred<Location>()
         if (locationManager == null) {
@@ -53,7 +51,6 @@ class CGGPS(private val context: Context) {
     }
 
     @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, TimeoutException::class, ServicesAvailabilityException::class)
-    @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION])
     suspend fun actualLocation(accuracy: Accuracy = Accuracy.BALANCED, @IntRange(from = 0) timeout: Long = 5000L): Location {
         val coroutine = CompletableDeferred<Location>()
         if (locationManager == null) {
@@ -79,7 +76,6 @@ class CGGPS(private val context: Context) {
     }
 
     @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, TimeoutException::class, ServicesAvailabilityException::class)
-    @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION])
     suspend fun actualLocationWithEnable(accuracy: Accuracy = Accuracy.BALANCED, requestCode: Int = 10414, @IntRange(from = 0) timeout: Long = 5000L): Location? {
         val settingsRequest = LocationSettingsRequest.Builder()
             .addLocationRequest(createRequest(accuracy, timeout, 1))
@@ -111,12 +107,12 @@ class CGGPS(private val context: Context) {
         return actualLocation(accuracy, timeout)
     }
 
-    @SuppressLint("MissingPermission")
     @Throws(ServicesAvailabilityException::class)
-    @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION])
     fun requestUpdates(listener: SendChannel<Pair<Location?, Exception?>>, accuracy: Accuracy = Accuracy.BALANCED, @IntRange(from = 0) timeout: Long = 5000L) = Job().apply {
         if (!isGooglePlayServicesAvailable(context)) {
             throw ServicesAvailabilityException()
+        } else if (!checkPermission(context, false)) {
+            throw SecurityException("Permissions for GPS was not given")
         }
 
         val locationListener = createLocationCallback(null, listener)

@@ -1,16 +1,12 @@
 package com.genius.cgps
 
-import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.location.*
 import android.os.Bundle
 import android.provider.Settings
 import android.support.annotation.IntRange
-import android.support.annotation.RequiresPermission
 import kotlinx.coroutines.experimental.*
-import kotlinx.coroutines.experimental.android.Main
 import kotlinx.coroutines.experimental.channels.SendChannel
 import java.io.IOException
 import java.util.*
@@ -24,7 +20,6 @@ class CGPS(private val context: Context) {
     private val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager?
 
     @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class)
-    @RequiresPermission(allOf = [Manifest.permission.ACCESS_COARSE_LOCATION])
     suspend fun lastLocation(accuracy: Accuracy = Accuracy.COARSE) = suspendCoroutine<Location> { coroutine ->
         if (manager == null) {
             coroutine.resumeWithException(LocationException("Location manager not found"))
@@ -43,7 +38,6 @@ class CGPS(private val context: Context) {
     }
 
     @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, TimeoutException::class)
-    @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION])
     suspend fun actualLocation(accuracy: Accuracy = Accuracy.COARSE, @IntRange(from = 0) timeout: Long = 5000L) = suspendCoroutine<Location> { coroutine ->
         if (manager == null) {
             coroutine.resumeWithException(LocationException("Location manager not found"))
@@ -61,8 +55,6 @@ class CGPS(private val context: Context) {
         }
     }
 
-    @SuppressLint("MissingPermission")
-    @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION])
     fun requestUpdates(listener: SendChannel<Pair<Location?, Exception?>>, context: CoroutineContext = Dispatchers.Main, accuracy: Accuracy = Accuracy.COARSE, @IntRange(from = 0) timeout: Long = 5000L, @IntRange(from = 0) interval: Long = 10000L) = Job().apply {
         GlobalScope.launch {
             while (true) {

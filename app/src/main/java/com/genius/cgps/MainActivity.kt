@@ -1,7 +1,6 @@
 package com.genius.cgps
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.location.Address
 import android.location.Location
@@ -16,7 +15,6 @@ import com.github.florent37.runtimepermission.kotlin.coroutines.experimental.ask
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 import kotlinx.coroutines.experimental.*
-import kotlinx.coroutines.experimental.android.Main
 import kotlinx.coroutines.experimental.channels.actor
 import kotlinx.coroutines.experimental.channels.consumeEach
 import java.io.BufferedWriter
@@ -105,7 +103,6 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         }
     }
 
-    @SuppressLint("MissingPermission")
     private fun locationUpdates() = CGGPS(this).requestUpdates(actor {
         channel.consumeEach { pair ->
             pair.first?.let { location ->
