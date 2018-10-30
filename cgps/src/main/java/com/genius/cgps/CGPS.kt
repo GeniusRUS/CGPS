@@ -6,14 +6,16 @@ import android.location.*
 import android.os.Bundle
 import android.provider.Settings
 import android.support.annotation.IntRange
-import kotlinx.coroutines.experimental.*
-import kotlinx.coroutines.experimental.channels.SendChannel
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.SendChannel
 import java.io.IOException
 import java.util.*
 import java.util.concurrent.TimeoutException
-import kotlin.coroutines.experimental.Continuation
-import kotlin.coroutines.experimental.CoroutineContext
-import kotlin.coroutines.experimental.suspendCoroutine
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 class CGPS(private val context: Context) {
 
