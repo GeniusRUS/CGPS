@@ -17,7 +17,9 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-class CGPS(private val context: Context) {
+class CGPS(private val context: Context): CoroutineScope {
+
+    override val coroutineContext = Dispatchers.Default
 
     private val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager?
 
@@ -50,7 +52,7 @@ class CGPS(private val context: Context) {
         } else {
             val listener = getLocationListener(coroutine)
             manager.requestSingleUpdate(getCriteria(accuracy), listener, context.mainLooper)
-            GlobalScope.launch {
+            launch {
                 delay(timeout)
                 cancelWithTimeout(coroutine, listener, timeout)
             }
@@ -58,7 +60,7 @@ class CGPS(private val context: Context) {
     }
 
     fun requestUpdates(listener: SendChannel<Pair<Location?, Exception?>>, context: CoroutineContext = Dispatchers.Main, accuracy: Accuracy = Accuracy.COARSE, @IntRange(from = 0) timeout: Long = 5000L, @IntRange(from = 0) interval: Long = 10000L) = Job().apply {
-        GlobalScope.launch {
+        launch {
             while (true) {
                 launch(context = context) {
                     try {

@@ -33,17 +33,17 @@ class CGGPS(private val context: Context) {
     suspend fun lastLocation(): Location {
         val coroutine = CompletableDeferred<Location>()
         if (locationManager == null) {
-            coroutine.cancel(LocationException("Location manager not found"))
+            coroutine.completeExceptionally(LocationException("Location manager not found"))
         } else if (!isGooglePlayServicesAvailable(context)) {
-            coroutine.cancel(ServicesAvailabilityException())
+            coroutine.completeExceptionally(ServicesAvailabilityException())
         } else if (!isLocationEnabled(locationManager)) {
-            coroutine.cancel(LocationDisabledException())
+            coroutine.completeExceptionally(LocationDisabledException())
         } else if (!checkPermission(context, true)) {
-            coroutine.cancel(SecurityException("Permissions for GPS was not given"))
+            coroutine.completeExceptionally(SecurityException("Permissions for GPS was not given"))
         } else {
             val location = manager.lastLocation.await()
             if (location == null) {
-                coroutine.cancel(LocationException("Last location not found"))
+                coroutine.completeExceptionally(LocationException("Last location not found"))
             } else {
                 coroutine.complete(location)
             }
@@ -56,19 +56,19 @@ class CGGPS(private val context: Context) {
     suspend fun actualLocation(accuracy: Accuracy = Accuracy.BALANCED, @IntRange(from = 0) timeout: Long = 5000L): Location {
         val coroutine = CompletableDeferred<Location>()
         if (locationManager == null) {
-            coroutine.cancel(LocationException("Location manager not found"))
+            coroutine.completeExceptionally(LocationException("Location manager not found"))
         } else if (!isGooglePlayServicesAvailable(context)) {
-            coroutine.cancel(ServicesAvailabilityException())
+            coroutine.completeExceptionally(ServicesAvailabilityException())
         } else if (!isLocationEnabled(locationManager)) {
-            coroutine.cancel(LocationDisabledException())
+            coroutine.completeExceptionally(LocationDisabledException())
         } else if (!checkPermission(context, false)) {
-            coroutine.cancel(SecurityException("Permissions for GPS was not given"))
+            coroutine.completeExceptionally(SecurityException("Permissions for GPS was not given"))
         } else {
             val listener = createLocationCallback(coroutine, null)
 
             requestLocationUpdates(listener, accuracy, timeout, 1)
 
-            GlobalScope.launch {
+            withContext(Dispatchers.Default) {
                 delay(timeout)
                 cancelWithTimeout(coroutine, listener, timeout)
             }
@@ -154,13 +154,13 @@ class CGGPS(private val context: Context) {
 
         override fun onLocationAvailability(locationStatus: LocationAvailability?) {
             if (locationStatus?.isLocationAvailable == false) {
-                coroutine?.cancel(LocationException("Location are unavailable with those settings"))
+                coroutine?.completeExceptionally(LocationException("Location are unavailable with those settings"))
                 listener?.offer(Pair(null, LocationException("Location are unavailable with those settings")))
             }
         }
 
         fun handleError() {
-            coroutine?.cancel(LocationException("Location not found"))
+            coroutine?.completeExceptionally(LocationException("Location not found"))
             listener?.offer(Pair(null, LocationException("Location not found")))
         }
     }
@@ -168,7 +168,7 @@ class CGGPS(private val context: Context) {
     private fun cancelWithTimeout(coroutine: CompletableDeferred<Location>, listener: LocationCallback, timeout: Long) {
         if (coroutine.isActive) {
             manager?.removeLocationUpdates(listener)
-            coroutine.cancel(TimeoutException("Location timeout on $timeout ms"))
+            coroutine.completeExceptionally(TimeoutException("Location timeout on $timeout ms"))
         }
     }
 
