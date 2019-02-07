@@ -17,6 +17,7 @@ If one of the conditions is not valid, then the corresponding exception is throw
 - TimeoutException - if location is not received in time (by default 5000ms)
 - LocationException - others exceptions
 - ServicesAvailabilityException - if Google Services not available on device
+- ResolutionNeedException (for CGGPS only) - if user permission is requested to enable GPS using the system dialog
 
 To query the current location, the accuracy of the determination (Accuracy.*) and the maximum timeout of the operation
 
@@ -46,10 +47,7 @@ val location = CGGPS(context).requestUpdates(channel: SendChannel<Pair<Location?
 ```kotlin
 val location = CGGPS(context).actualLocationWithEnable()
 ```
-**NOTE**: In onActivityResult you must call
-```
-handleResult(requestCode: Int, resultCode: Int, data: Intent?, action: () -> Unit)
-```
+**NOTE**: In onActivityResult you must handle the call in `itActivityResult` with the passed `requestCode`
 
 ## Install
 Add to your .gradle file:
