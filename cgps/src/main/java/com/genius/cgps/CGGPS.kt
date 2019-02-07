@@ -1,10 +1,11 @@
+@file:Suppress("UNUSED")
+
 package com.genius.cgps
 
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
-import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.*
@@ -93,7 +94,7 @@ class CGGPS(private val context: Context) {
                         try {
                             val rae = e as ResolvableApiException
                             rae.startResolutionForResult(context, requestCode)
-                            return null
+                            throw ResolutionNeedException(requestCode)
                         } catch (sie: IntentSender.SendIntentException) {
                             throw LocationException("Cannot find activity for resolve GPS enable intent")
                         }
@@ -180,12 +181,6 @@ class CGGPS(private val context: Context) {
     }
 }
 
-fun handleResult(requestCode: Int, resultCode: Int, data: Intent?, action: () -> Unit) {
-    if (resultCode == Activity.RESULT_OK) {
-        action.invoke()
-    }
-}
-
 suspend fun <T> Task<T>.await() = suspendCoroutine<T> { continuation ->
     addOnSuccessListener { continuation.resume(it) }
     addOnFailureListener { continuation.resumeWithException(it) }
@@ -209,3 +204,4 @@ internal fun isLocationEnabled(manager: LocationManager?) = manager?.isProviderE
 class LocationException(message: String): Exception(message)
 class LocationDisabledException: Exception("Location adapter turned off on device")
 class ServicesAvailabilityException: Exception("Google services is not available on this device")
+class ResolutionNeedException(code: Int): Exception("Inclusion permission requested with request code: $code")

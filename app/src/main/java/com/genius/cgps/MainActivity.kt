@@ -1,6 +1,7 @@
 package com.genius.cgps
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
 import android.location.Address
 import android.location.Location
@@ -51,11 +52,12 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
-        handleResult(requestCode, resultCode, data) {
+        if (resultCode == Activity.RESULT_OK) {
             singleUpdate()
         }
     }
 
+    @Suppress("DEPRECATION")
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
@@ -75,13 +77,14 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             }
             R.id.action_stop -> {
                 updates?.cancel()
-                tv_hello.text = "Stopped"
+                tv_hello.setText(R.string.info_stopped)
                 return true
             }
             else -> super.onOptionsItemSelected(item)
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun singleUpdate() {
         launch {
             try {

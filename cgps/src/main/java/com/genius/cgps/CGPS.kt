@@ -1,3 +1,5 @@
+@file:Suppress("UNUSED")
+
 package com.genius.cgps
 
 import android.content.Context
@@ -11,7 +13,6 @@ import kotlinx.coroutines.channels.SendChannel
 import java.io.IOException
 import java.util.*
 import java.util.concurrent.TimeoutException
-import kotlin.coroutines.Continuation
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -42,21 +43,26 @@ class CGPS(private val context: Context): CoroutineScope {
     }
 
     @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, TimeoutException::class)
-    suspend fun actualLocation(accuracy: Accuracy = Accuracy.COARSE, @IntRange(from = 0) timeout: Long = 5000L) = suspendCoroutine<Location> { coroutine ->
+    suspend fun actualLocation(accuracy: Accuracy = Accuracy.COARSE, @IntRange(from = 0) timeout: Long = 5000L): Location {
+        val coroutine = CompletableDeferred<Location>()
         if (manager == null) {
-            coroutine.resumeWithException(LocationException("Location manager not found"))
+            coroutine.completeExceptionally(LocationException("Location manager not found"))
         } else if (!isLocationEnabled(manager)) {
-            coroutine.resumeWithException(LocationDisabledException())
+            coroutine.completeExceptionally(LocationDisabledException())
         } else if (!checkPermission(context, false)) {
-            coroutine.resumeWithException(SecurityException("Permissions for GPS was not given"))
+            coroutine.completeExceptionally(SecurityException("Permissions for GPS was not given"))
         } else {
             val listener = getLocationListener(coroutine)
+
             manager.requestSingleUpdate(getCriteria(accuracy), listener, context.mainLooper)
-            launch {
+
+            withContext(Dispatchers.Default) {
                 delay(timeout)
                 cancelWithTimeout(coroutine, listener, timeout)
             }
         }
+
+        return coroutine.await()
     }
 
     fun requestUpdates(listener: SendChannel<Pair<Location?, Exception?>>, context: CoroutineContext = Dispatchers.Main, accuracy: Accuracy = Accuracy.COARSE, @IntRange(from = 0) timeout: Long = 5000L, @IntRange(from = 0) interval: Long = 10000L) = Job().apply {
@@ -78,26 +84,26 @@ class CGPS(private val context: Context): CoroutineScope {
         }
     }
 
-    private fun getLocationListener(coroutine: Continuation<Location>): LocationListener {
+    private fun getLocationListener(coroutine: CompletableDeferred<Location>): LocationListener {
         return object : LocationListener {
             override fun onLocationChanged(location: Location?) {
                 if (location == null) {
-                    coroutine.resumeWithException(LocationException("Location not found"))
+                    coroutine.completeExceptionally(LocationException("Location not found"))
                 } else {
-                    coroutine.resume(location)
+                    coroutine.complete(location)
                 }
             }
 
             override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
-                coroutine.resumeWithException(LocationException("Status $provider changed: $status with extras $extras"))
+                coroutine.completeExceptionally(LocationException("Status $provider changed: $status with extras $extras"))
             }
 
             override fun onProviderEnabled(provider: String?) {
-                coroutine.resumeWithException(LocationException("Provider $provider enabled"))
+                coroutine.completeExceptionally(LocationException("Provider $provider enabled"))
             }
 
             override fun onProviderDisabled(provider: String?) {
-                coroutine.resumeWithException(LocationException("Provider $provider disabled"))
+                coroutine.completeExceptionally(LocationException("Provider $provider disabled"))
             }
         }
     }
@@ -110,10 +116,10 @@ class CGPS(private val context: Context): CoroutineScope {
         }
     }
 
-    private fun cancelWithTimeout(coroutine: Continuation<Location>, listener: LocationListener, timeout: Long) {
-        if (coroutine.context.isActive) {
+    private fun cancelWithTimeout(coroutine: CompletableDeferred<Location>, listener: LocationListener, timeout: Long) {
+        if (coroutine.isActive) {
             manager?.removeUpdates(listener)
-            coroutine.resumeWithException(TimeoutException("Location timeout on $timeout ms"))
+            coroutine.completeExceptionally(TimeoutException("Location timeout on $timeout ms"))
         }
     }
 

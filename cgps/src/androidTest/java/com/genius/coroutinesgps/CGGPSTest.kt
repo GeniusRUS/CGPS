@@ -16,12 +16,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class LocationTest {
+class CGGPSTest {
 
     private lateinit var job: Job
 
-    @get:Rule
-    private val runtimePermissionRule = GrantPermissionRule.grant(android.Manifest.permission.ACCESS_FINE_LOCATION)
+    @Rule
+    @JvmField
+    val runtimePermissionRule = GrantPermissionRule.grant(android.Manifest.permission.ACCESS_FINE_LOCATION)
 
     @Test
     fun actualLocation() {
