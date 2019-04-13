@@ -107,8 +107,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     }
 
     private fun locationUpdates() = CGGPS(this).requestUpdates(actor {
-        channel.consumeEach { pair ->
-            pair.first?.let { location ->
+        channel.consumeEach { result ->
+            result.getOrNull()?.let { location ->
                 val message = """Step $currentStep in ${formatter.format(Date(location.time))}
             |
             |Provider: ${location.provider}
@@ -121,7 +121,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                 logEvent(message)
                 currentStep++
             }
-            pair.second?.let { error ->
+            result.exceptionOrNull() ?.let { error ->
                 Log.e("GPS ERROR", error.message, error)
                 val message = """Step $currentStep in ${formatter.format(Date())}
                 |

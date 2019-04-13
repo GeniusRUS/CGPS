@@ -52,7 +52,7 @@ class CGPSTest {
 
     @Test
     fun requestUpdates() {
-        val locationList = ArrayList<Pair<Location?, Exception?>>()
+        val locationList = ArrayList<Result<Location>>()
 
         job = CGPS(InstrumentationRegistry.getContext()).requestUpdates(GlobalScope.actor {
             channel.consumeEach {

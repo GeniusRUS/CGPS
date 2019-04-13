@@ -65,15 +65,15 @@ class CGPS(private val context: Context): CoroutineScope {
         return coroutine.await()
     }
 
-    fun requestUpdates(listener: SendChannel<Pair<Location?, Exception?>>, context: CoroutineContext = Dispatchers.Main, accuracy: Accuracy = Accuracy.COARSE, @IntRange(from = 0) timeout: Long = 5000L, @IntRange(from = 0) interval: Long = 10000L) = Job().apply {
+    fun requestUpdates(listener: SendChannel<Result<Location>>, context: CoroutineContext = Dispatchers.Main, accuracy: Accuracy = Accuracy.COARSE, @IntRange(from = 0) timeout: Long = 5000L, @IntRange(from = 0) interval: Long = 10000L) = Job().apply {
         launch {
             while (true) {
                 launch(context = context) {
                     try {
                         val location = actualLocation(accuracy, timeout)
-                        listener.offer(Pair(location, null))
+                        listener.offer(Result.success(location))
                     } catch (e: Exception) {
-                        listener.offer(Pair(null, e))
+                        listener.offer(Result.failure(e))
                     }
                 }
 
