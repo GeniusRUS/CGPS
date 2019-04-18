@@ -9,21 +9,18 @@ import android.content.Context
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.*
-import android.support.annotation.IntDef
-import android.support.annotation.IntRange
-import android.support.v4.content.ContextCompat
+import androidx.annotation.IntDef
+import androidx.annotation.IntRange
+import androidx.core.content.ContextCompat
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.location.*
-import com.google.android.gms.tasks.Task
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
+import kotlinx.coroutines.tasks.await
 import java.util.concurrent.TimeoutException
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
 
 class CGGPS(private val context: Context) {
 
@@ -181,11 +178,6 @@ class CGGPS(private val context: Context) {
     )
     @Retention(AnnotationRetention.SOURCE)
     private annotation class Accuracy
-}
-
-suspend fun <T> Task<T>.await() = suspendCoroutine<T> { continuation ->
-    addOnSuccessListener { continuation.resume(it) }
-    addOnFailureListener { continuation.resumeWithException(it) }
 }
 
 fun isGooglePlayServicesAvailable(context: Context): Boolean {

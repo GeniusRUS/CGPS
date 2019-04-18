@@ -7,7 +7,7 @@ import android.content.Intent
 import android.location.*
 import android.os.Bundle
 import android.provider.Settings
-import android.support.annotation.IntRange
+import androidx.annotation.IntRange
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.SendChannel
 import java.io.IOException

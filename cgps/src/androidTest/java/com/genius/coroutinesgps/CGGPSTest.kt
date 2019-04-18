@@ -1,9 +1,9 @@
 package com.genius.coroutinesgps
 
 import android.location.Location
-import android.support.test.InstrumentationRegistry
-import android.support.test.rule.GrantPermissionRule
-import android.support.test.runner.AndroidJUnit4
+import androidx.test.InstrumentationRegistry
+import androidx.test.rule.GrantPermissionRule
+import androidx.test.runner.AndroidJUnit4
 import com.genius.cgps.CGGPS
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
