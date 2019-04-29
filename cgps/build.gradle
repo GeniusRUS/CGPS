@@ -50,7 +50,7 @@ android {
     }
 }
 
-def verCoroutinesStuff = '1.2.0'
+def verCoroutinesStuff = '1.2.1'
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
