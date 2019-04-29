@@ -1,6 +1,7 @@
 # CGPS
 <a href='https://bintray.com/geniusrus/CGPS/com.geniusrus.cgps/_latestVersion'><img src='https://api.bintray.com/packages/geniusrus/CGPS/com.geniusrus.cgps/images/download.svg'></a>
 [![CircleCI](https://circleci.com/gh/GeniusRUS/CGPS/tree/master.svg?style=svg)](https://circleci.com/gh/GeniusRUS/CGPS/tree/master)
+[![codebeat badge](https://codebeat.co/badges/fb32140e-dcac-4214-9dbf-5b70aaa8592b)](https://codebeat.co/projects/github-com-geniusrus-cgps-master)
 
 ## Short description
 Simple obtaining of the current or the last location with the Kotlin Coroutines
