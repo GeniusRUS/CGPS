@@ -33,7 +33,7 @@ class CGPS(private val context: Context): CoroutineScope {
         } else if (!checkPermission(context, true)) {
             coroutine.resumeWithException(SecurityException("Permissions for GPS was not given"))
         } else {
-            val location = manager.getLastKnownLocation(manager.getBestProvider(getCriteria(accuracy), true))
+            val location = manager.getLastKnownLocation(manager.getBestProvider(accuracy.toCriteria(), true))
             if (location == null) {
                 coroutine.resumeWithException(LocationException("Last location not found"))
             } else {
@@ -52,13 +52,13 @@ class CGPS(private val context: Context): CoroutineScope {
         } else if (!checkPermission(context, false)) {
             coroutine.completeExceptionally(SecurityException("Permissions for GPS was not given"))
         } else {
-            val listener = getLocationListener(coroutine)
+            val listener = coroutine.createLocationListener()
 
-            manager.requestSingleUpdate(getCriteria(accuracy), listener, context.mainLooper)
+            manager.requestSingleUpdate(accuracy.toCriteria(), listener, context.mainLooper)
 
             withContext(Dispatchers.Default) {
                 delay(timeout)
-                cancelWithTimeout(coroutine, listener, timeout)
+                coroutine.cancelWithTimeout(listener, timeout)
             }
         }
 
@@ -84,43 +84,41 @@ class CGPS(private val context: Context): CoroutineScope {
         }
     }
 
-    private fun getLocationListener(coroutine: CompletableDeferred<Location>): LocationListener {
+    private fun CompletableDeferred<Location>.createLocationListener(): LocationListener {
         return object : LocationListener {
             override fun onLocationChanged(location: Location?) {
                 if (location == null) {
-                    coroutine.completeExceptionally(LocationException("Location not found"))
+                    completeExceptionally(LocationException("Location not found"))
                 } else {
-                    coroutine.complete(location)
+                    complete(location)
                 }
             }
 
             override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
-                coroutine.completeExceptionally(LocationException("Status $provider changed: $status with extras $extras"))
+                completeExceptionally(LocationException("Status $provider changed: $status with extras $extras"))
             }
 
             override fun onProviderEnabled(provider: String?) {
-                coroutine.completeExceptionally(LocationException("Provider $provider enabled"))
+                completeExceptionally(LocationException("Provider $provider enabled"))
             }
 
             override fun onProviderDisabled(provider: String?) {
-                coroutine.completeExceptionally(LocationException("Provider $provider disabled"))
+                completeExceptionally(LocationException("Provider $provider disabled"))
             }
         }
     }
 
-    private fun getCriteria(accuracy: Accuracy): Criteria {
-        return Criteria().apply {
-            setAccuracy(accuracy.accuracy)
-            isCostAllowed = true
-            powerRequirement = accuracy.power
+    private fun CompletableDeferred<Location>.cancelWithTimeout(listener: LocationListener, timeout: Long) {
+        if (isActive) {
+            manager?.removeUpdates(listener)
+            completeExceptionally(TimeoutException("Location timeout on $timeout ms"))
         }
     }
 
-    private fun cancelWithTimeout(coroutine: CompletableDeferred<Location>, listener: LocationListener, timeout: Long) {
-        if (coroutine.isActive) {
-            manager?.removeUpdates(listener)
-            coroutine.completeExceptionally(TimeoutException("Location timeout on $timeout ms"))
-        }
+    private fun Accuracy.toCriteria(): Criteria = Criteria().apply {
+        accuracy = accuracy
+        isCostAllowed = true
+        powerRequirement = power
     }
 
     enum class Accuracy(val accuracy: Int, val power: Int) {
