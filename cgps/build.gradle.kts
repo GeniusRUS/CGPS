@@ -39,7 +39,7 @@ extra.apply{
     set("developerEmail", "Gen1usRUS@yandex.ru")
     set("licenseName", "The Apache Software License, Version 2.0")
     set("licenseUrl", "http://www.apache.org/licenses/LICENSE-2.0.txt")
-    set("allLicenses", {"Apache-2.0"})
+    set("allLicenses", arrayOf("Apache-2.0"))
 }
 
 android {
