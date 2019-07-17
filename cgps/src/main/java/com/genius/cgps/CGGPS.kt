@@ -206,8 +206,8 @@ class CGGPS(private val context: Context) {
         requestLocationUpdates(locationListener, accuracy, interval, timeout, updates)
 
         invokeOnCompletion {
-            listener.close()
             manager?.removeLocationUpdates(locationListener)
+            listener.close()
         }
     }
 
