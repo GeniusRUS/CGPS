@@ -99,7 +99,7 @@ class CGPS(private val context: Context): CoroutineScope {
      * По окончанию работы по получению координат закрывает [SendChannel] и отписывает [LocationManager] от своего слушателя
      *
      * @param listener слушатель в виде [SendChannel] для получения потока полученных координат
-     * @param accuracy точность полученных координат. Значение по умолчанию [LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY]
+     * @param accuracy точность полученных координат. Значение по умолчанию [Accuracy.COARSE]
      * @param timeout таймаут на получение координат. Значение по умолчанию 5000 миллисекунд
      * @param interval интервал времени для получения координат. Значение по умолчанию 10000 миллисекунд
      * @return [Job] работа по цикличному получению координат
