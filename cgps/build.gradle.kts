@@ -79,7 +79,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:17.0.0")
 
     testImplementation("junit:junit:4.12")
-    testImplementation("org.mockito:mockito-core:2.21.0")
+    testImplementation("org.mockito:mockito-core:3.0.0")
     androidTestImplementation("androidx.test:runner:1.2.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.2.0")
     androidTestImplementation("androidx.test:rules:1.2.0")
