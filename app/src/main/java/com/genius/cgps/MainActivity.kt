@@ -3,6 +3,7 @@ package com.genius.cgps
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.location.Address
 import android.location.Location
 import android.os.Bundle
@@ -10,8 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import com.github.florent37.runtimepermission.kotlin.PermissionException
-import com.github.florent37.runtimepermission.kotlin.coroutines.experimental.askPermission
+import androidx.core.app.ActivityCompat
 
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
@@ -57,24 +57,9 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         }
     }
 
-    @Suppress("DEPRECATION")
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         return when (item.itemId) {
-            R.id.action_start -> {
-                launch {
-                    try {
-                        askPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    } catch (e: PermissionException) {
-
-                    }
-                    currentStep = 1
-                    updates = locationUpdates()
-                }
-                return true
-            }
+            R.id.action_start -> startUpdates()
             R.id.action_stop -> {
                 updates?.cancel()
                 tv_hello.setText(R.string.info_stopped)
@@ -84,12 +69,25 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         }
     }
 
-    @Suppress("DEPRECATION")
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        if (requestCode == REQUEST_CODE_WRITE_STORAGE) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startUpdates()
+            }
+        } else if (requestCode == REQUEST_CODE_FINE_LOCATION) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                singleUpdate()
+            }
+        }
+    }
+
     private fun singleUpdate() {
         launch {
-            try {
-                askPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-            } catch (e: PermissionException) {
+            val permission = ActivityCompat.checkSelfPermission(this@MainActivity, Manifest.permission.ACCESS_FINE_LOCATION)
+            if (permission != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this@MainActivity, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_CODE_FINE_LOCATION)
                 return@launch
             }
 
@@ -104,6 +102,18 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
             tv_hello.text = message
         }
+    }
+
+    private fun startUpdates(): Boolean {
+        val permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), REQUEST_CODE_WRITE_STORAGE)
+            return false
+        }
+
+        currentStep = 1
+        updates = locationUpdates()
+        return true
     }
 
     private fun locationUpdates() = CGGPS(this).requestUpdates(actor {
@@ -154,6 +164,11 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         } catch (e: IOException) {
             Log.e("File", e.message, e)
         }
+    }
+
+    companion object {
+        private const val REQUEST_CODE_WRITE_STORAGE = 1014
+        private const val REQUEST_CODE_FINE_LOCATION = 1015
     }
 }
 
