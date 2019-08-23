@@ -2,7 +2,7 @@
 
 buildscript {
     extra.apply{
-        set("kotlin_version", "1.3.41")
+        set("kotlin_version", "1.3.50")
         set("dokka_version", "0.9.18")
     }
     repositories {

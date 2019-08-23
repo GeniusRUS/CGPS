@@ -41,11 +41,16 @@ class CGPS(private val context: Context): CoroutineScope {
         } else if (!checkPermission(context, true)) {
             coroutine.resumeWithException(SecurityException("Permissions for GPS was not given"))
         } else {
-            val location = manager.getLastKnownLocation(manager.getBestProvider(accuracy.toCriteria(), true))
-            if (location == null) {
-                coroutine.resumeWithException(LocationException("Last location not found"))
+            val provider = manager.getBestProvider(accuracy.toCriteria(), true)
+            if (provider == null) {
+                coroutine.resumeWithException(LocationException("Provider not found for this accuracy: ${accuracy.accuracy} and power: ${accuracy.power}"))
             } else {
-                coroutine.resume(location)
+                val location = manager.getLastKnownLocation(provider)
+                if (location == null) {
+                    coroutine.resumeWithException(LocationException("Last location not found"))
+                } else {
+                    coroutine.resume(location)
+                }
             }
         }
     }
