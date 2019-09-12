@@ -68,10 +68,10 @@ android {
     }
 }
 
-val verCoroutinesStuff = "1.3.0"
+val verCoroutinesStuff = "1.3.1"
 
 dependencies {
-    implementation("androidx.appcompat:appcompat:1.0.2")
+    implementation("androidx.appcompat:appcompat:1.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$verCoroutinesStuff")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$verCoroutinesStuff")
     implementation(kotlin("stdlib-jdk7", KotlinCompilerVersion.VERSION))
