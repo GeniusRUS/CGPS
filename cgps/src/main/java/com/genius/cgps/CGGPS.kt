@@ -93,7 +93,7 @@ class CGGPS(private val context: Context) {
      * @throws TimeoutException в случае, если превышено время ожидания запроса геолокациии
      */
     @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, TimeoutException::class, ServicesAvailabilityException::class)
-    suspend fun actualLocation(@Accuracy accuracy: Int = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY,
+    suspend fun actualLocation(@Accuracy accuracy: Int = Accuracy.BALANCED,
                                @IntRange(from = 0) timeout: Long = 5000L): Location {
         val coroutine = CompletableDeferred<Location>()
         if (locationManager == null) {
@@ -138,11 +138,11 @@ class CGGPS(private val context: Context) {
      * @throws ResolutionNeedException в случае, если требуется подверждение включения GPS-адаптера пользователем
      */
     @Throws(LocationException::class, SecurityException::class, TimeoutException::class, ServicesAvailabilityException::class)
-    suspend fun actualLocationWithEnable(@Accuracy accuracy: Int = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY,
+    suspend fun actualLocationWithEnable(@Accuracy accuracy: Int = Accuracy.BALANCED,
                                          requestCode: Int = 10414,
                                          @IntRange(from = 0) timeout: Long = 5000L): Location? {
         val settingsRequest = LocationSettingsRequest.Builder()
-            .addLocationRequest(createRequest(accuracy, timeout, 1))
+            .addLocationRequest(createRequest(accuracy, timeout, 1, Integer.MAX_VALUE))
             .build()
 
         try {
@@ -191,7 +191,7 @@ class CGGPS(private val context: Context) {
      */
     @Throws(ServicesAvailabilityException::class)
     fun requestUpdates(listener: SendChannel<Result<Location>>,
-                       @Accuracy accuracy: Int = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY,
+                       @Accuracy accuracy: Int = Accuracy.BALANCED,
                        @IntRange(from = 0) timeout: Long = 5000L,
                        @IntRange(from = 0) interval: Long = 5000L,
                        @IntRange(from = 0) updates: Int = Integer.MAX_VALUE) = Job().apply {
@@ -215,7 +215,8 @@ class CGGPS(private val context: Context) {
     private fun requestLocationUpdates(listener: LocationCallback,
                                        @Accuracy accuracy: Int,
                                        interval: Long,
-                                       timeout: Long, updates: Int) {
+                                       timeout: Long,
+                                       updates: Int) {
         val request = createRequest(accuracy, interval, timeout, updates)
 
         manager.requestLocationUpdates(request, listener, context.mainLooper)
@@ -224,7 +225,7 @@ class CGGPS(private val context: Context) {
     private fun createRequest(@Accuracy accuracy: Int,
                               interval: Long,
                               timeout: Long,
-                              updates: Int = Integer.MAX_VALUE): LocationRequest {
+                              updates: Int): LocationRequest {
         return LocationRequest().apply {
             this.numUpdates = updates
             this.interval = interval
@@ -265,13 +266,20 @@ class CGGPS(private val context: Context) {
     }
 
     @IntDef(
-        LocationRequest.PRIORITY_HIGH_ACCURACY,
-        LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY,
-        LocationRequest.PRIORITY_LOW_POWER,
-        LocationRequest.PRIORITY_NO_POWER
+        Accuracy.HIGH,
+        Accuracy.BALANCED,
+        Accuracy.LOW,
+        Accuracy.NO
     )
     @Retention(AnnotationRetention.SOURCE)
-    private annotation class Accuracy
+    private annotation class Accuracy {
+        companion object {
+            const val HIGH = LocationRequest.PRIORITY_HIGH_ACCURACY
+            const val BALANCED = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY
+            const val LOW = LocationRequest.PRIORITY_LOW_POWER
+            const val NO = LocationRequest.PRIORITY_NO_POWER
+        }
+    }
 }
 
 fun isGooglePlayServicesAvailable(context: Context): Boolean {

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Address
 import android.location.Location
+import android.os.Build
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import android.util.Log
@@ -41,6 +42,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         setSupportActionBar(toolbar)
 
         fab.setOnClickListener { singleUpdate() }
+        b_service.setOnClickListener { serviceAction() }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -79,6 +81,10 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         } else if (requestCode == REQUEST_CODE_FINE_LOCATION) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 singleUpdate()
+            }
+        } else if (requestCode == REQUEST_CODE_FINE_LOCATION_TO_SERVICE) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                serviceAction()
             }
         }
     }
@@ -166,9 +172,25 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         }
     }
 
+    private fun serviceAction() {
+        val permission = ActivityCompat.checkSelfPermission(this@MainActivity, Manifest.permission.ACCESS_FINE_LOCATION)
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this@MainActivity, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_CODE_FINE_LOCATION_TO_SERVICE)
+            return
+        }
+
+        val intent = Intent(
+            this,
+            LocationService::class.java
+        )
+
+        startService(intent)
+    }
+
     companion object {
         private const val REQUEST_CODE_WRITE_STORAGE = 1014
         private const val REQUEST_CODE_FINE_LOCATION = 1015
+        private const val REQUEST_CODE_FINE_LOCATION_TO_SERVICE = 1016
     }
 }
 

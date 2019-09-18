@@ -3,4 +3,5 @@
     <string name="action_start">Start</string>
     <string name="action_stop">Stop</string>
     <string name="info_stopped">Stopped</string>
+    <string name="service_action">Service</string>
 </resources>
