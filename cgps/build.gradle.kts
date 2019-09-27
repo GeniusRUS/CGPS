@@ -68,7 +68,7 @@ android {
     }
 }
 
-val verCoroutinesStuff = "1.3.1"
+val verCoroutinesStuff = "1.3.2"
 
 dependencies {
     implementation("androidx.appcompat:appcompat:1.1.0")
