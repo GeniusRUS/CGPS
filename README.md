@@ -41,7 +41,7 @@ val location = CGGPS(context).actualLocation()
 
 * Get location updates
 ```kotlin
-val location = CGGPS(context).requestUpdates(channel: SendChannel<Pair<Location?, Exception?>>)
+val location = CGGPS(context).requestUpdates(): Flow<Result<Location>>
 ```
 
 * Get actual location with enable GPS request
