@@ -8,17 +8,20 @@ import android.app.Activity
 import android.content.Context
 import android.content.IntentSender
 import android.content.pm.PackageManager
-import android.location.*
+import android.location.Location
+import android.location.LocationManager
 import androidx.annotation.IntDef
 import androidx.annotation.IntRange
 import androidx.core.content.ContextCompat
-import com.google.android.gms.common.api.ApiException
-import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
 import java.util.concurrent.TimeoutException
 
@@ -94,7 +97,7 @@ class CGGPS(private val context: Context) {
      */
     @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, TimeoutException::class, ServicesAvailabilityException::class)
     suspend fun actualLocation(@Accuracy accuracy: Int = Accuracy.BALANCED,
-                               @IntRange(from = 0) timeout: Long = 5000L): Location {
+                               @IntRange(from = 0) timeout: Long = 5_000L): Location {
         val coroutine = CompletableDeferred<Location>()
         if (locationManager == null) {
             coroutine.completeExceptionally(LocationException("Location manager not found"))
@@ -140,7 +143,7 @@ class CGGPS(private val context: Context) {
     @Throws(LocationException::class, SecurityException::class, TimeoutException::class, ServicesAvailabilityException::class)
     suspend fun actualLocationWithEnable(@Accuracy accuracy: Int = Accuracy.BALANCED,
                                          requestCode: Int = 10414,
-                                         @IntRange(from = 0) timeout: Long = 5000L): Location? {
+                                         @IntRange(from = 0) timeout: Long = 5_000L): Location? {
         val settingsRequest = LocationSettingsRequest.Builder()
             .addLocationRequest(createRequest(accuracy, timeout, 1, Integer.MAX_VALUE))
             .build()
@@ -176,38 +179,40 @@ class CGGPS(private val context: Context) {
      *
      * Для гибкости запроса локации можно указать [accuracy], [timeout]
      *
-     * Так как возвращается экземпляр [Job], то существует механизм, которым можно управлять жизненным циклом этого объекта
-     *
      * По окончанию работы по получению координат закрывает [SendChannel] и отписывает [LocationManager] от своего слушателя
      *
-     * @param listener слушатель в виде [SendChannel] для получения потока полученных координат
      * @param accuracy точность полученных координат. Значение по умолчанию [LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY]
      * @param timeout таймаут на получение координат. Значение по умолчанию 5000 миллисекунд
      * @param interval интервал времени для получения координат. Значение по умолчанию 5000 миллисекунд
      * @param updates требуемое количество обновлений. Значение по умолчанию [Integer.MAX_VALUE]
-     * @return [Job] работа по цикличному получению координат
+     * @return [flow] поток с результатами [Result]
      * @throws ServicesAvailabilityException в случае, если на устройстве отсутствуют сервисы GooglePlay
      * @throws SecurityException в случае отсутствующих разрешений на получение геолокации
      */
-    @Throws(ServicesAvailabilityException::class)
-    fun requestUpdates(listener: SendChannel<Result<Location>>,
-                       @Accuracy accuracy: Int = Accuracy.BALANCED,
-                       @IntRange(from = 0) timeout: Long = 5000L,
-                       @IntRange(from = 0) interval: Long = 5000L,
-                       @IntRange(from = 0) updates: Int = Integer.MAX_VALUE) = Job().apply {
+    fun requestUpdates(@Accuracy accuracy: Int = Accuracy.BALANCED,
+                       @IntRange(from = 0) timeout: Long = 5_000L,
+                       @IntRange(from = 0) interval: Long = 5_000L,
+                       @IntRange(from = 0) updates: Int = Integer.MAX_VALUE) = flow {
         if (!isGooglePlayServicesAvailable(context)) {
-            throw ServicesAvailabilityException()
+            emit(Result.failure(ServicesAvailabilityException()))
+            return@flow
         } else if (!checkPermission(context, false)) {
-            throw SecurityException("Permissions for GPS was not given")
+            emit(Result.failure(SecurityException("Permissions for GPS was not given")))
+            return@flow
         }
 
-        val locationListener = CGPSCallback(null, listener)
+        val updateChannel = Channel<Result<Location>>()
+
+        val locationListener = CGPSCallback(null, updateChannel)
 
         requestLocationUpdates(locationListener, accuracy, interval, timeout, updates)
 
-        invokeOnCompletion {
+        try {
+            for (location in updateChannel) {
+                emit(location)
+            }
+        } finally {
             manager?.removeLocationUpdates(locationListener)
-            listener.close()
         }
     }
 
@@ -236,7 +241,7 @@ class CGGPS(private val context: Context) {
     }
 
     private class CGPSCallback(private val coroutine: CompletableDeferred<Location>?,
-                               private val listener: SendChannel<Result<Location>>?) : LocationCallback() {
+                               private val listener: Channel<Result<Location>>?) : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult?) {
             locationResult?.locations?.getOrNull(0)?.let {
                 coroutine?.complete(it)
@@ -313,21 +318,21 @@ internal fun isLocationEnabled(manager: LocationManager?) = manager?.isProviderE
  * @constructor принимает в себя non-null [message] причину ошибки
  * @param message - причина ошибки в текстовом представлении
  */
-class LocationException(message: String): Exception(message)
+class LocationException(message: String) : Exception(message)
 
 /**
  * Выбрасывается в случае, если у пользователя выключен GPS-адаптер на устройстве
  */
-class LocationDisabledException: Exception("Location adapter turned off on device")
+class LocationDisabledException : Exception("Location adapter turned off on device")
 
 /**
  * Выбрасывается в случае, если у пользователя на устройстве не доступны GooglePlay сервисы
  */
-class ServicesAvailabilityException: Exception("Google services is not available on this device")
+class ServicesAvailabilityException : Exception("Google services is not available on this device")
 
 /**
  * Выбрасывается в случае, если требуется ручное включение пользователем GPS-адаптера с помощью диалога от GooglePlay сервисов
  * @constructor принимает в себя non-null код запроса
  * @param code - код запроса на включение GPS-адаптера пользователем
  */
-class ResolutionNeedException(code: Int): Exception("Inclusion permission requested with request code: $code")
+class ResolutionNeedException(code: Int) : Exception("Inclusion permission requested with request code: $code")

@@ -6,19 +6,15 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Address
 import android.location.Location
-import android.os.Build
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import android.util.Log
-import android.view.Menu
-import android.view.MenuItem
 import androidx.core.app.ActivityCompat
 
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.actor
-import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.flow.collect
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
@@ -39,16 +35,19 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        setSupportActionBar(toolbar)
 
         fab.setOnClickListener { singleUpdate() }
         b_service.setOnClickListener { serviceAction() }
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        menuInflater.inflate(R.menu.menu_main, menu)
-        return true
+        b_location_updates.setOnClickListener {
+            if (updates?.isActive != true) {
+                b_location_updates.setText(R.string.action_stop)
+                startUpdates()
+            } else {
+                updates?.cancel()
+                b_location_updates.setText(R.string.action_start)
+                tv_hello.setText(R.string.info_stopped)
+            }
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -56,18 +55,6 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
         if (resultCode == Activity.RESULT_OK) {
             singleUpdate()
-        }
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_start -> startUpdates()
-            R.id.action_stop -> {
-                updates?.cancel()
-                tv_hello.setText(R.string.info_stopped)
-                return true
-            }
-            else -> super.onOptionsItemSelected(item)
         }
     }
 
@@ -118,14 +105,10 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         }
 
         currentStep = 1
-        updates = locationUpdates()
-        return true
-    }
-
-    private fun locationUpdates() = CGGPS(this).requestUpdates(actor {
-        channel.consumeEach { result ->
-            result.getOrNull()?.let { location ->
-                val message = """Step $currentStep in ${formatter.format(Date(location.time))}
+        updates = launch {
+            CGGPS(this@MainActivity).requestUpdates().collect { result ->
+                result.getOrNull()?.let { location ->
+                    val message = """Step $currentStep in ${formatter.format(Date(location.time))}
             |
             |Provider: ${location.provider}
             |Accuracy: ${location.accuracy}
@@ -133,21 +116,24 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             |Speed: ${location.speed}
             |Altitude: ${location.altitude}""".trimMargin()
 
-                tv_hello.text = message
-                logEvent(message)
-                currentStep++
-            }
-            result.exceptionOrNull() ?.let { error ->
-                Log.e("GPS ERROR", error.message, error)
-                val message = """Step $currentStep in ${formatter.format(Date())}
+                    tv_hello.text = message
+                    logEvent(message)
+                    currentStep++
+                }
+                result.exceptionOrNull() ?.let { error ->
+                    Log.e("GPS ERROR", error.message, error)
+                    val message = """Step $currentStep in ${formatter.format(Date())}
                 |
                 |${error.message ?: "Empty message"}""".trimMargin()
                     tv_hello.text = message
                     logEvent(message)
                     currentStep++
+                }
             }
         }
-    })
+
+        return true
+    }
 
     private fun logEvent(text: String) {
         val logFile = File("sdcard/CGPS.txt")

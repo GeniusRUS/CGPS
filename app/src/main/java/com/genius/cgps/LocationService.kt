@@ -6,16 +6,13 @@ import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.actor
-import kotlinx.coroutines.channels.consumeEach
 import kotlin.coroutines.CoroutineContext
 import androidx.core.app.NotificationCompat
 import android.content.Context
 import android.graphics.drawable.Icon
 import android.os.Build
+import kotlinx.coroutines.flow.collect
 
-@ObsoleteCoroutinesApi
-@ExperimentalCoroutinesApi
 class LocationService : Service(), CoroutineScope {
 
     override val coroutineContext: CoroutineContext
@@ -35,11 +32,11 @@ class LocationService : Service(), CoroutineScope {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        updaterJob = updater.requestUpdates(actor {
-            this.channel.consumeEach {
+        updaterJob = launch {
+            updater.requestUpdates().collect {
                 Log.d(TAG, it.getOrNull()?.toString() ?: "null")
             }
-        })
+        }
 
         val cancelIntent = Intent(this, LocationService::class.java).apply {
             putExtra(NOTIFICATION_ACTION, true)

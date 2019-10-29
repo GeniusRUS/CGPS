@@ -10,10 +10,10 @@ import android.provider.Settings
 import androidx.annotation.IntRange
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.flow.flow
 import java.io.IOException
 import java.util.*
 import java.util.concurrent.TimeoutException
-import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -72,7 +72,7 @@ class CGPS(private val context: Context): CoroutineScope {
      */
     @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, TimeoutException::class)
     suspend fun actualLocation(accuracy: Accuracy = Accuracy.COARSE,
-                               @IntRange(from = 0) timeout: Long = 5000L): Location {
+                               @IntRange(from = 0) timeout: Long = 5_000L): Location {
         val coroutine = CompletableDeferred<Location>()
         if (manager == null) {
             coroutine.completeExceptionally(LocationException("Location manager not found"))
@@ -85,9 +85,15 @@ class CGPS(private val context: Context): CoroutineScope {
 
             manager.requestSingleUpdate(accuracy.toCriteria(), listener, context.mainLooper)
 
-            withContext(Dispatchers.Default) {
-                delay(timeout)
-                coroutine.cancelWithTimeout(listener, timeout)
+            try {
+                withTimeout(timeout) {
+                    coroutine.await()
+                }
+            } catch (e: TimeoutCancellationException) {
+                if (coroutine.isActive) {
+                    manager.removeUpdates(listener)
+                    coroutine.completeExceptionally(TimeoutException("Location timeout on $timeout ms"))
+                }
             }
         }
 
@@ -103,34 +109,25 @@ class CGPS(private val context: Context): CoroutineScope {
      *
      * По окончанию работы по получению координат закрывает [SendChannel] и отписывает [LocationManager] от своего слушателя
      *
-     * @param listener слушатель в виде [SendChannel] для получения потока полученных координат
      * @param accuracy точность полученных координат. Значение по умолчанию [Accuracy.COARSE]
      * @param timeout таймаут на получение координат. Значение по умолчанию 5000 миллисекунд
      * @param interval интервал времени для получения координат. Значение по умолчанию 10000 миллисекунд
-     * @return [Job] работа по цикличному получению координат
+     * @return [flow] поток с результатами [Result]
      * @throws ServicesAvailabilityException в случае, если на устройстве отсутствуют сервисы GooglePlay
      * @throws SecurityException в случае отсутствующих разрешений на получение геолокации
      */
-    fun requestUpdates(listener: SendChannel<Result<Location>>,
-                       context: CoroutineContext = Dispatchers.Main,
-                       accuracy: Accuracy = Accuracy.COARSE,
-                       @IntRange(from = 0) timeout: Long = 5000L,
-                       @IntRange(from = 0) interval: Long = 10000L) = Job().apply {
-        launch {
-            while (true) {
-                launch(context = context) {
-                    try {
-                        val location = actualLocation(accuracy, timeout)
-                        listener.offer(Result.success(location))
-                    } catch (e: Exception) {
-                        listener.offer(Result.failure(e))
-                    }
-                }
-
-                delay(interval)
+    fun requestUpdates(accuracy: Accuracy = Accuracy.COARSE,
+                       @IntRange(from = 0) timeout: Long = 5_000L,
+                       @IntRange(from = 0) interval: Long = 10_000L) = flow {
+        while (true) {
+            try {
+                val location = actualLocation(accuracy, timeout)
+                emit(Result.success(location))
+            } catch (e: Exception) {
+                emit(Result.failure(e))
             }
-        }.invokeOnCompletion {
-            listener.close()
+
+            delay(interval)
         }
     }
 

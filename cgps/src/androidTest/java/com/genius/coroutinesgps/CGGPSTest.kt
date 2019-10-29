@@ -1,14 +1,13 @@
 package com.genius.coroutinesgps
 
 import android.location.Location
-import androidx.test.InstrumentationRegistry
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
-import androidx.test.runner.AndroidJUnit4
 import com.genius.cgps.CGGPS
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.actor
-import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Rule
@@ -28,7 +27,7 @@ class CGGPSTest {
     fun actualLocation() {
         runBlocking {
             try {
-                val location = CGGPS(InstrumentationRegistry.getContext()).actualLocation()
+                val location = CGGPS(ApplicationProvider.getApplicationContext()).actualLocation()
 
                 assertTrue(location.longitude > 0)
             } catch (e: Exception) {
@@ -41,7 +40,7 @@ class CGGPSTest {
     fun lastLocation() {
         runBlocking {
             try {
-                val location = CGGPS(InstrumentationRegistry.getContext()).lastLocation()
+                val location = CGGPS(ApplicationProvider.getApplicationContext()).lastLocation()
 
                 assertTrue(location.longitude > 0)
             } catch (e: Exception) {
@@ -54,15 +53,17 @@ class CGGPSTest {
     fun requestUpdates() {
         val locationList = ArrayList<Result<Location>>()
 
-        job = CGGPS(InstrumentationRegistry.getContext()).requestUpdates(GlobalScope.actor {
-            channel.consumeEach {
-                locationList.add(it)
+        runBlocking {
+            job = launch {
+                CGGPS(ApplicationProvider.getApplicationContext()).requestUpdates().collect {
+                    locationList.add(it)
 
-                if (locationList.size == 3) {
-                    job.cancel()
-                    assertTrue(true)
+                    if (locationList.size == 3) {
+                        job.cancel()
+                        assertTrue(true)
+                    }
                 }
             }
-        })
+        }
     }
 }
