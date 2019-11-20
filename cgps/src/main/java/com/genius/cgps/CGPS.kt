@@ -8,6 +8,7 @@ import android.location.*
 import android.os.Bundle
 import android.provider.Settings
 import androidx.annotation.IntRange
+import androidx.annotation.WorkerThread
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.flow
@@ -185,6 +186,7 @@ class CGPS(private val context: Context): CoroutineScope {
  * @throws IllegalArgumentException если [Location.getLatitude] меньше -90 или больше 90
  * @throws IllegalArgumentException если [Location.getLongitude] меньше -180 или больше 180
  */
+@WorkerThread
 @Throws(IOException::class)
 fun Location.toAddress(context: Context, locale: Locale = Locale.getDefault()): Address? = Geocoder(context, locale).getFromLocation(this.latitude, this.longitude, 1).firstOrNull()
 

@@ -1,4 +1,4 @@
-package com.genius.cgps
+package com.genius.example
 
 import android.Manifest
 import android.app.Activity
@@ -10,6 +10,8 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import android.util.Log
 import androidx.core.app.ActivityCompat
+import com.genius.cgps.CGGPS
+import com.genius.cgps.toAddress
 
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
@@ -85,8 +87,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             }
 
             val message = try {
-                val location = CGGPS(this@MainActivity).actualLocationWithEnable()
-                val address = location?.toAddress(this@MainActivity)
+                val location: Location? = CGGPS(this@MainActivity).actualLocationWithEnable()
+                val address = withContext(Dispatchers.IO) { location?.toAddress(this@MainActivity) }
                 location?.printInfo(address)
             } catch (e: Exception) {
                 Log.e("GPS ERROR", e.message, e)

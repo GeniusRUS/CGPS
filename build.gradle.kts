@@ -2,7 +2,7 @@
 
 buildscript {
     extra.apply{
-        set("kotlin_version", "1.3.50")
+        set("kotlin_version", "1.3.60")
         set("dokka_version", "0.9.18")
     }
     repositories {
@@ -10,7 +10,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:3.5.1")
+        classpath("com.android.tools.build:gradle:3.5.2")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${extra.get("kotlin_version") as String}")
 
         classpath("com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.4")

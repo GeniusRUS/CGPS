@@ -1,4 +1,4 @@
-package com.genius.cgps
+package com.genius.example
 
 import android.app.*
 import android.content.Intent
@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import android.content.Context
 import android.graphics.drawable.Icon
 import android.os.Build
+import com.genius.cgps.CGGPS
 import kotlinx.coroutines.flow.collect
 
 class LocationService : Service(), CoroutineScope {

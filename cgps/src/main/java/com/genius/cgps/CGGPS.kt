@@ -112,9 +112,15 @@ class CGGPS(private val context: Context) {
 
             requestLocationUpdates(listener, accuracy, timeout, timeout, 1)
 
-            withContext(Dispatchers.Default) {
-                delay(timeout)
-                cancelWithTimeout(coroutine, listener, timeout)
+            try {
+                withTimeout(timeout) {
+                    coroutine.await()
+                }
+            } catch (e: TimeoutCancellationException) {
+                if (coroutine.isActive) {
+                    manager?.removeLocationUpdates(listener)
+                    coroutine.completeExceptionally(TimeoutException("Location timeout on $timeout ms"))
+                }
             }
         }
 
@@ -259,14 +265,6 @@ class CGGPS(private val context: Context) {
         fun handleError() {
             coroutine?.completeExceptionally(LocationException("Location not found"))
             listener?.offer(Result.failure(LocationException("Location not found")))
-        }
-    }
-
-    private fun cancelWithTimeout(coroutine: CompletableDeferred<Location>,
-                                  listener: LocationCallback, timeout: Long) {
-        if (coroutine.isActive) {
-            manager?.removeLocationUpdates(listener)
-            coroutine.completeExceptionally(TimeoutException("Location timeout on $timeout ms"))
         }
     }
 
