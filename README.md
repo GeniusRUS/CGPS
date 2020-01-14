@@ -59,9 +59,8 @@ implementation "com.geniusrus.cgps:cgps:$last_version"
 The sample is on `app` module
 
 ## Developed by 
-* Viktor Likhanov
-
-Yandex: [Gen1usRUS@yandex.ru](mailto:Gen1usRUS@yandex.ru)
+* [Viktor Likhanov](mailto:Gen1usRUS@yandex.ru)
+* [Umalt Isakhazhiev](mailto:UIsakxazhiev@unitbean.com)
 
 ## License
 ```
