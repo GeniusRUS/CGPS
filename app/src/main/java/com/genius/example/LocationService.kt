@@ -17,8 +17,9 @@ import kotlinx.coroutines.flow.collect
 class LocationService : Service(), CoroutineScope {
 
     override val coroutineContext: CoroutineContext
-        get() = Dispatchers.Main
+        get() = Dispatchers.Main + supervisorJob
 
+    private val supervisorJob: Job by lazy { SupervisorJob() }
     private val updater: CGGPS by lazy { CGGPS(this) }
     private var updaterJob: Job? = null
 
@@ -29,10 +30,16 @@ class LocationService : Service(), CoroutineScope {
     }
 
     override fun onDestroy() {
-        updaterJob?.cancel()
+        supervisorJob.cancel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.getBooleanExtra(NOTIFICATION_ACTION, false) == true) {
+            updaterJob?.cancel()
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
         updaterJob = launch {
             updater.requestUpdates().collect {
                 Log.d(TAG, it.getOrNull()?.toString() ?: "null")
@@ -44,38 +51,26 @@ class LocationService : Service(), CoroutineScope {
         }
         val pendingIntent = PendingIntent.getService(this, 0, cancelIntent, PendingIntent.FLAG_UPDATE_CURRENT)
 
-        val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager?
             manager?.createNotificationChannel(
-                NotificationChannel("channelLocation", "Channel for location service", NotificationManager.IMPORTANCE_HIGH)
+                NotificationChannel(NOTIFICATION_CHANNEL_ID, getString(R.string.location_service_description_text), NotificationManager.IMPORTANCE_HIGH)
             )
-            Notification.Builder(this, "channelLocation")
-                .setContentTitle(getString(R.string.app_name))
-                .setContentText("Location service is working")
-                .setAutoCancel(true)
-                .addAction(
-                    Notification.Action.Builder(
-                        Icon.createWithResource(this, android.R.drawable.ic_menu_mylocation),
-                        "Stop",
-                        pendingIntent
-                    ).build()
-                )
-                .build()
-        } else {
-            NotificationCompat.Builder(this)
-                .setContentTitle(getString(R.string.app_name))
-                .setContentText("Location service is working")
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setAutoCancel(true)
-                .addAction(
-                    NotificationCompat.Action.Builder(
-                        android.R.drawable.ic_menu_mylocation,
-                        "Stop",
-                        pendingIntent
-                    ).build()
-                )
-                .build()
         }
+        val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+            .setContentTitle(getString(R.string.app_name))
+            .setContentText(getString(R.string.location_service_working))
+            .setSmallIcon(R.drawable.ic_my_location_white_24dp)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .addAction(
+                NotificationCompat.Action.Builder(
+                    R.drawable.ic_cancel_white_24dp,
+                    getString(R.string.stop_service_text),
+                    pendingIntent
+                ).build()
+            )
+            .build()
         startForeground(1, notification)
 
         return START_NOT_STICKY
@@ -88,6 +83,7 @@ class LocationService : Service(), CoroutineScope {
 
     companion object {
         private const val TAG = "CGPSLocationService"
+        private const val NOTIFICATION_CHANNEL_ID = "channelLocation"
         const val NOTIFICATION_ACTION = "notification_action"
     }
 }

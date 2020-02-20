@@ -10,6 +10,7 @@ import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
+import android.os.Looper
 import androidx.annotation.IntDef
 import androidx.annotation.IntRange
 import androidx.core.content.ContextCompat
@@ -18,11 +19,13 @@ import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
 import java.util.concurrent.TimeoutException
 
 /**
@@ -43,9 +46,9 @@ import java.util.concurrent.TimeoutException
  */
 class CGGPS(private val context: Context) {
 
-    private val manager = LocationServices.getFusedLocationProviderClient(context)
-    private val settingsManager = LocationServices.getSettingsClient(context)
-    private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager?
+    private val fusedLocation: FusedLocationProviderClient by lazy { LocationServices.getFusedLocationProviderClient(context) }
+    private val settings: SettingsClient by lazy { LocationServices.getSettingsClient(context) }
+    private val location: LocationManager? by lazy { context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager }
 
     /**
      * Получает последнюю известную локацию пользователя из сервисов GooglePlay
@@ -59,16 +62,16 @@ class CGGPS(private val context: Context) {
     @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, ServicesAvailabilityException::class)
     suspend fun lastLocation(): Location {
         val coroutine = CompletableDeferred<Location>()
-        if (locationManager == null) {
+        if (location == null) {
             coroutine.completeExceptionally(LocationException("Location manager not found"))
         } else if (!isGooglePlayServicesAvailable(context)) {
             coroutine.completeExceptionally(ServicesAvailabilityException())
-        } else if (!isLocationEnabled(locationManager)) {
+        } else if (!isLocationEnabled(location)) {
             coroutine.completeExceptionally(LocationDisabledException())
         } else if (!checkPermission(context, true)) {
             coroutine.completeExceptionally(SecurityException("Permissions for GPS was not given"))
         } else {
-            val location = manager.lastLocation.await()
+            val location = fusedLocation.lastLocation.await()
             if (location == null) {
                 coroutine.completeExceptionally(LocationException("Last location not found"))
             } else {
@@ -99,11 +102,11 @@ class CGGPS(private val context: Context) {
     suspend fun actualLocation(@Accuracy accuracy: Int = Accuracy.BALANCED,
                                @IntRange(from = 0) timeout: Long = 5_000L): Location {
         val coroutine = CompletableDeferred<Location>()
-        if (locationManager == null) {
+        if (location == null) {
             coroutine.completeExceptionally(LocationException("Location manager not found"))
         } else if (!isGooglePlayServicesAvailable(context)) {
             coroutine.completeExceptionally(ServicesAvailabilityException())
-        } else if (!isLocationEnabled(locationManager)) {
+        } else if (!isLocationEnabled(location)) {
             coroutine.completeExceptionally(LocationDisabledException())
         } else if (!checkPermission(context, false)) {
             coroutine.completeExceptionally(SecurityException("Permissions for GPS was not given"))
@@ -118,7 +121,7 @@ class CGGPS(private val context: Context) {
                 }
             } catch (e: TimeoutCancellationException) {
                 if (coroutine.isActive) {
-                    manager?.removeLocationUpdates(listener)
+                    fusedLocation.removeLocationUpdates(listener)
                     coroutine.completeExceptionally(TimeoutException("Location timeout on $timeout ms"))
                 }
             }
@@ -151,11 +154,11 @@ class CGGPS(private val context: Context) {
                                          requestCode: Int = 10414,
                                          @IntRange(from = 0) timeout: Long = 5_000L): Location? {
         val settingsRequest = LocationSettingsRequest.Builder()
-            .addLocationRequest(createRequest(accuracy, timeout, 1, Integer.MAX_VALUE))
+            .addLocationRequest(createRequest(accuracy, timeout, timeout, 1))
             .build()
 
         try {
-            settingsManager.checkLocationSettings(settingsRequest).await()
+            settings.checkLocationSettings(settingsRequest).await()
         } catch (e: Exception) {
             when (val statusCode = (e as? ApiException)?.statusCode) {
                 LocationSettingsStatusCodes.RESOLUTION_REQUIRED -> {
@@ -190,15 +193,13 @@ class CGGPS(private val context: Context) {
      * @param accuracy точность полученных координат. Значение по умолчанию [LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY]
      * @param timeout таймаут на получение координат. Значение по умолчанию 5000 миллисекунд
      * @param interval интервал времени для получения координат. Значение по умолчанию 5000 миллисекунд
-     * @param updates требуемое количество обновлений. Значение по умолчанию [Integer.MAX_VALUE]
      * @return [flow] поток с результатами [Result]
      * @throws ServicesAvailabilityException в случае, если на устройстве отсутствуют сервисы GooglePlay
      * @throws SecurityException в случае отсутствующих разрешений на получение геолокации
      */
     fun requestUpdates(@Accuracy accuracy: Int = Accuracy.BALANCED,
                        @IntRange(from = 0) timeout: Long = 5_000L,
-                       @IntRange(from = 0) interval: Long = 5_000L,
-                       @IntRange(from = 0) updates: Int = Integer.MAX_VALUE) = flow {
+                       @IntRange(from = 0) interval: Long = 5_000L) = flow {
         if (!isGooglePlayServicesAvailable(context)) {
             emit(Result.failure(ServicesAvailabilityException()))
             return@flow
@@ -211,14 +212,14 @@ class CGGPS(private val context: Context) {
 
         val locationListener = CGPSCallback(null, updateChannel)
 
-        requestLocationUpdates(locationListener, accuracy, interval, timeout, updates)
+        requestLocationUpdates(locationListener, accuracy, interval, timeout)
 
         try {
             for (location in updateChannel) {
                 emit(location)
             }
         } finally {
-            manager?.removeLocationUpdates(locationListener)
+            fusedLocation.removeLocationUpdates(locationListener)
         }
     }
 
@@ -227,21 +228,20 @@ class CGGPS(private val context: Context) {
                                        @Accuracy accuracy: Int,
                                        interval: Long,
                                        timeout: Long,
-                                       updates: Int) {
+                                       updates: Int? = null) {
         val request = createRequest(accuracy, interval, timeout, updates)
 
-        manager.requestLocationUpdates(request, listener, context.mainLooper)
+        fusedLocation.requestLocationUpdates(request, listener, Looper.getMainLooper())
     }
 
     private fun createRequest(@Accuracy accuracy: Int,
                               interval: Long,
                               timeout: Long,
-                              updates: Int): LocationRequest {
+                              updates: Int? = null): LocationRequest {
         return LocationRequest().apply {
-            this.numUpdates = updates
+            updates?.let { count -> this.numUpdates = count }
             this.interval = interval
             this.maxWaitTime = timeout
-            this.fastestInterval = timeout / 10
             this.priority = accuracy
         }
     }
@@ -275,7 +275,7 @@ class CGGPS(private val context: Context) {
         Accuracy.NO
     )
     @Retention(AnnotationRetention.SOURCE)
-    private annotation class Accuracy {
+    annotation class Accuracy {
         companion object {
             const val HIGH = LocationRequest.PRIORITY_HIGH_ACCURACY
             const val BALANCED = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY

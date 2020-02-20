@@ -14,7 +14,6 @@ import com.genius.cgps.CGGPS
 import com.genius.cgps.toAddress
 
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.content_main.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import java.io.BufferedWriter
@@ -24,6 +23,7 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.coroutines.CoroutineContext
+import kotlin.system.measureTimeMillis
 
 class MainActivity : AppCompatActivity(), CoroutineScope {
 
@@ -87,9 +87,15 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             }
 
             val message = try {
-                val location: Location? = CGGPS(this@MainActivity).actualLocationWithEnable()
-                val address = withContext(Dispatchers.IO) { location?.toAddress(this@MainActivity) }
-                location?.printInfo(address)
+                buildString {
+                    val requestTime = measureTimeMillis {
+                        val location: Location? = CGGPS(this@MainActivity).actualLocationWithEnable()
+                        val address = withContext(Dispatchers.IO) { location?.toAddress(this@MainActivity) }
+                        this.appendln(location?.printInfo(address))
+                    }
+                    this.append("Done in $requestTime milliseconds")
+                }
+
             } catch (e: Exception) {
                 Log.e("GPS ERROR", e.message, e)
                 e.message ?: "Empty error"

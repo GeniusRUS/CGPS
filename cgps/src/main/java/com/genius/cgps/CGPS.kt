@@ -19,11 +19,9 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-class CGPS(private val context: Context): CoroutineScope {
+class CGPS(private val context: Context) {
 
-    override val coroutineContext = Dispatchers.Default
-
-    private val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager?
+    private val manager: LocationManager? by lazy { context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager }
 
     /**
      * Получает последнюю известную локацию пользователя из GPS-адаптера устройства
@@ -42,11 +40,11 @@ class CGPS(private val context: Context): CoroutineScope {
         } else if (!checkPermission(context, true)) {
             coroutine.resumeWithException(SecurityException("Permissions for GPS was not given"))
         } else {
-            val provider = manager.getBestProvider(accuracy.toCriteria(), true)
+            val provider = manager?.getBestProvider(accuracy.toCriteria(), true)
             if (provider == null) {
                 coroutine.resumeWithException(LocationException("Provider not found for this accuracy: ${accuracy.accuracy} and power: ${accuracy.power}"))
             } else {
-                val location = manager.getLastKnownLocation(provider)
+                val location = manager?.getLastKnownLocation(provider)
                 if (location == null) {
                     coroutine.resumeWithException(LocationException("Last location not found"))
                 } else {
@@ -84,7 +82,7 @@ class CGPS(private val context: Context): CoroutineScope {
         } else {
             val listener = coroutine.createLocationListener()
 
-            manager.requestSingleUpdate(accuracy.toCriteria(), listener, context.mainLooper)
+            manager?.requestSingleUpdate(accuracy.toCriteria(), listener, context.mainLooper)
 
             try {
                 withTimeout(timeout) {
@@ -92,7 +90,7 @@ class CGPS(private val context: Context): CoroutineScope {
                 }
             } catch (e: TimeoutCancellationException) {
                 if (coroutine.isActive) {
-                    manager.removeUpdates(listener)
+                    manager?.removeUpdates(listener)
                     coroutine.completeExceptionally(TimeoutException("Location timeout on $timeout ms"))
                 }
             }
@@ -111,15 +109,15 @@ class CGPS(private val context: Context): CoroutineScope {
      * По окончанию работы по получению координат закрывает [SendChannel] и отписывает [LocationManager] от своего слушателя
      *
      * @param accuracy точность полученных координат. Значение по умолчанию [Accuracy.COARSE]
-     * @param timeout таймаут на получение координат. Значение по умолчанию 5000 миллисекунд
-     * @param interval интервал времени для получения координат. Значение по умолчанию 10000 миллисекунд
+     * @param timeout таймаут на получение координат. Значение по умолчанию 10_000 миллисекунд
+     * @param interval интервал времени для получения координат. Значение по умолчанию 5000 миллисекунд
      * @return [flow] поток с результатами [Result]
      * @throws ServicesAvailabilityException в случае, если на устройстве отсутствуют сервисы GooglePlay
      * @throws SecurityException в случае отсутствующих разрешений на получение геолокации
      */
     fun requestUpdates(accuracy: Accuracy = Accuracy.COARSE,
-                       @IntRange(from = 0) timeout: Long = 5_000L,
-                       @IntRange(from = 0) interval: Long = 10_000L) = flow {
+                       @IntRange(from = 0) timeout: Long = 10_000L,
+                       @IntRange(from = 0) interval: Long = 5_000L) = flow {
         while (true) {
             try {
                 val location = actualLocation(accuracy, timeout)

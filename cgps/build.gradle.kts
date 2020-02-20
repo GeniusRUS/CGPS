@@ -13,7 +13,7 @@ buildscript {
 plugins {
     id("com.jfrog.bintray")
     id("com.github.dcendents.android-maven")
-    id("org.jetbrains.dokka") version "0.9.18"
+    id("org.jetbrains.dokka") version "0.10.1"
     id("com.android.library")
     kotlin("android")
     kotlin("android.extensions")
@@ -30,7 +30,7 @@ extra.apply{
     set("libraryName", "cgps")
     set("publishedGroupId", "com.geniusrus.cgps")
     set("artifact", "cgps")
-    set("libraryVersion", "1.6.1")
+    set("libraryVersion", "1.6.2")
     set("libraryDescription", "Android location library on coroutines")
     set("siteUrl", "https://github.com/GeniusRUS/CGPS")
     set("gitUrl", "https://github.com/GeniusRUS/CGPS.git")
@@ -55,11 +55,11 @@ android {
     buildTypes {
         getByName("debug") {
             isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         getByName("release") {
             isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 
@@ -68,7 +68,7 @@ android {
     }
 }
 
-val verCoroutinesStuff = "1.3.2"
+val verCoroutinesStuff = "1.3.3"
 
 dependencies {
     implementation("androidx.appcompat:appcompat:1.1.0")
@@ -79,7 +79,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:17.0.0")
 
     testImplementation("junit:junit:4.12")
-    testImplementation("org.mockito:mockito-core:3.1.0")
+    testImplementation("org.mockito:mockito-core:3.2.4")
     testImplementation("androidx.test:core:1.2.0")
     androidTestImplementation("androidx.test.ext:junit:1.1.1")
     androidTestImplementation("androidx.test:runner:1.2.0")
