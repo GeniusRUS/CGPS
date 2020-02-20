@@ -9,7 +9,6 @@ import kotlinx.coroutines.*
 import kotlin.coroutines.CoroutineContext
 import androidx.core.app.NotificationCompat
 import android.content.Context
-import android.graphics.drawable.Icon
 import android.os.Build
 import com.genius.cgps.CGGPS
 import kotlinx.coroutines.flow.collect
@@ -46,6 +45,14 @@ class LocationService : Service(), CoroutineScope {
             }
         }
 
+        val cancelIntent: PendingIntent = createCancelIntentAndChannel()
+        val notification: Notification = createCancelNotification(cancelIntent)
+        startForeground(1, notification)
+
+        return START_NOT_STICKY
+    }
+
+    private fun createCancelIntentAndChannel(): PendingIntent {
         val cancelIntent = Intent(this, LocationService::class.java).apply {
             putExtra(NOTIFICATION_ACTION, true)
         }
@@ -57,7 +64,12 @@ class LocationService : Service(), CoroutineScope {
                 NotificationChannel(NOTIFICATION_CHANNEL_ID, getString(R.string.location_service_description_text), NotificationManager.IMPORTANCE_HIGH)
             )
         }
-        val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+
+        return pendingIntent
+    }
+
+    private fun createCancelNotification(cancelIntent: PendingIntent): Notification {
+        return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
             .setContentText(getString(R.string.location_service_working))
             .setSmallIcon(R.drawable.ic_my_location_white_24dp)
@@ -67,13 +79,10 @@ class LocationService : Service(), CoroutineScope {
                 NotificationCompat.Action.Builder(
                     R.drawable.ic_cancel_white_24dp,
                     getString(R.string.stop_service_text),
-                    pendingIntent
+                    cancelIntent
                 ).build()
             )
             .build()
-        startForeground(1, notification)
-
-        return START_NOT_STICKY
     }
 
     inner class LocalBinder : Binder() {

@@ -80,11 +80,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
     private fun singleUpdate() {
         launch {
-            val permission = ActivityCompat.checkSelfPermission(this@MainActivity, Manifest.permission.ACCESS_FINE_LOCATION)
-            if (permission != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this@MainActivity, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_CODE_FINE_LOCATION)
-                return@launch
-            }
+            if (checkPermissionIsNeedToRequest(REQUEST_CODE_FINE_LOCATION)) return@launch
 
             val message = try {
                 buildString {
@@ -167,18 +163,17 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     }
 
     private fun serviceAction() {
+        if (checkPermissionIsNeedToRequest(REQUEST_CODE_FINE_LOCATION_TO_SERVICE)) return
+        val serviceIntent = Intent(this, LocationService::class.java)
+        startService(serviceIntent)
+    }
+
+    private fun checkPermissionIsNeedToRequest(requestCode: Int): Boolean {
         val permission = ActivityCompat.checkSelfPermission(this@MainActivity, Manifest.permission.ACCESS_FINE_LOCATION)
-        if (permission != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this@MainActivity, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_CODE_FINE_LOCATION_TO_SERVICE)
-            return
-        }
-
-        val intent = Intent(
-            this,
-            LocationService::class.java
-        )
-
-        startService(intent)
+        return if (permission != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this@MainActivity, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), requestCode)
+            false
+        } else true
     }
 
     companion object {
