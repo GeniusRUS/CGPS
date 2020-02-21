@@ -30,7 +30,7 @@ extra.apply{
     set("libraryName", "cgps")
     set("publishedGroupId", "com.geniusrus.cgps")
     set("artifact", "cgps")
-    set("libraryVersion", "1.6.2")
+    set("libraryVersion", "1.6.3")
     set("libraryDescription", "Android location library on coroutines")
     set("siteUrl", "https://github.com/GeniusRUS/CGPS")
     set("gitUrl", "https://github.com/GeniusRUS/CGPS.git")

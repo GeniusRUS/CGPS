@@ -90,9 +90,10 @@ class CGPS(private val context: Context) {
                 }
             } catch (e: TimeoutCancellationException) {
                 if (coroutine.isActive) {
-                    manager?.removeUpdates(listener)
                     coroutine.completeExceptionally(TimeoutException("Location timeout on $timeout ms"))
                 }
+            } finally {
+                manager?.removeUpdates(listener)
             }
         }
 

@@ -121,9 +121,10 @@ class CGGPS(private val context: Context) {
                 }
             } catch (e: TimeoutCancellationException) {
                 if (coroutine.isActive) {
-                    fusedLocation.removeLocationUpdates(listener)
                     coroutine.completeExceptionally(TimeoutException("Location timeout on $timeout ms"))
                 }
+            } finally {
+                fusedLocation.removeLocationUpdates(listener)
             }
         }
 

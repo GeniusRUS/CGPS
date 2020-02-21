@@ -80,7 +80,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
     private fun singleUpdate() {
         launch {
-            if (checkPermissionIsNeedToRequest(REQUEST_CODE_FINE_LOCATION)) return@launch
+            if (!checkPermissionIsNeedToRequest(REQUEST_CODE_FINE_LOCATION)) return@launch
 
             val message = try {
                 buildString {
@@ -163,7 +163,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     }
 
     private fun serviceAction() {
-        if (checkPermissionIsNeedToRequest(REQUEST_CODE_FINE_LOCATION_TO_SERVICE)) return
+        if (!checkPermissionIsNeedToRequest(REQUEST_CODE_FINE_LOCATION_TO_SERVICE)) return
         val serviceIntent = Intent(this, LocationService::class.java)
         startService(serviceIntent)
     }
