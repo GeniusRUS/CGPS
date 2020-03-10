@@ -1,7 +1,7 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
-    val kotlinVersion: String by extra { "1.3.61" }
+    val kotlinVersion: String by extra { "1.3.70" }
     extra.apply{
         set("dokka_version", "0.10.1")
     }
@@ -10,7 +10,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:3.6.0")
+        classpath("com.android.tools.build:gradle:3.6.1")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
 
         classpath("com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.4")
