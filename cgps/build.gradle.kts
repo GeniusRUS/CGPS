@@ -68,10 +68,10 @@ android {
     }
 }
 
-val verCoroutinesStuff = "1.3.5"
+val verCoroutinesStuff = "1.3.9"
 
 dependencies {
-    implementation("androidx.appcompat:appcompat:1.1.0")
+    implementation("androidx.appcompat:appcompat:1.2.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$verCoroutinesStuff")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$verCoroutinesStuff")
     implementation(kotlin("stdlib-jdk7", KotlinCompilerVersion.VERSION))
@@ -79,7 +79,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:17.0.0")
 
     testImplementation("junit:junit:4.12")
-    testImplementation("org.mockito:mockito-core:3.2.4")
+    testImplementation("org.mockito:mockito-core:3.3.3")
     testImplementation("androidx.test:core:1.2.0")
     androidTestImplementation("androidx.test.ext:junit:1.1.1")
     androidTestImplementation("androidx.test:runner:1.2.0")
