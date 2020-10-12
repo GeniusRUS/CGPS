@@ -1,4 +1,3 @@
-import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.config.KotlinCompilerVersion
 
 buildscript {
@@ -13,15 +12,14 @@ buildscript {
 plugins {
     id("com.jfrog.bintray")
     id("com.github.dcendents.android-maven")
-    id("org.jetbrains.dokka") version "0.10.1"
+    id("org.jetbrains.dokka") version "1.4.10"
     id("com.android.library")
     kotlin("android")
     kotlin("android.extensions")
 }
 
-tasks.withType<DokkaTask> {
-    outputFormat = "html"
-    outputDirectory = "$buildDir/javadoc"
+tasks.dokkaJavadoc.configure {
+    outputDirectory.set(buildDir.resolve("javadoc"))
 }
 
 extra.apply{
@@ -43,10 +41,10 @@ extra.apply{
 }
 
 android {
-    compileSdkVersion(29)
+    compileSdkVersion(30)
     defaultConfig {
         minSdkVersion(16)
-        targetSdkVersion(29)
+        targetSdkVersion(30)
         versionCode = 1
         versionName = extra.get("libraryVersion") as String
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -76,15 +74,15 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$verCoroutinesStuff")
     implementation(kotlin("stdlib-jdk7", KotlinCompilerVersion.VERSION))
 
-    implementation("com.google.android.gms:play-services-location:17.0.0")
+    implementation("com.google.android.gms:play-services-location:17.1.0")
 
-    testImplementation("junit:junit:4.12")
+    testImplementation("junit:junit:4.13.1")
     testImplementation("org.mockito:mockito-core:3.3.3")
-    testImplementation("androidx.test:core:1.2.0")
-    androidTestImplementation("androidx.test.ext:junit:1.1.1")
-    androidTestImplementation("androidx.test:runner:1.2.0")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.2.0")
-    androidTestImplementation("androidx.test:rules:1.2.0")
+    testImplementation("androidx.test:core:1.3.0")
+    androidTestImplementation("androidx.test.ext:junit:1.1.2")
+    androidTestImplementation("androidx.test:runner:1.3.0")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.3.0")
+    androidTestImplementation("androidx.test:rules:1.3.0")
 }
 
 /**
