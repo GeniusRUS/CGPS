@@ -82,7 +82,23 @@ class CGPS(private val context: Context) {
         } else {
             val listener = coroutine.createLocationListener()
 
-            manager?.requestSingleUpdate(accuracy.toCriteria(), listener, context.mainLooper)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                val provider = manager?.getBestProvider(accuracy.toCriteria(), true)
+                if (provider == null || manager == null) {
+                    coroutine.completeExceptionally(LocationException("LocationManager not instantiated or provider instance is not defined"))
+                    return coroutine.await()
+                }
+                manager?.getCurrentLocation(
+                    provider,
+                    null,
+                    context.mainExecutor
+                ) { location ->
+                    coroutine.complete(location)
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                manager?.requestSingleUpdate(accuracy.toCriteria(), listener, context.mainLooper)
+            }
 
             try {
                 withTimeout(timeout) {
@@ -124,7 +140,7 @@ class CGPS(private val context: Context) {
                 val location = actualLocation(accuracy, timeout)
                 emit(Result.success(location))
             } catch (e: Exception) {
-                emit(Result.failure(e))
+                emit(Result.failure<Location>(e))
             }
 
             delay(interval)
@@ -133,23 +149,19 @@ class CGPS(private val context: Context) {
 
     private fun CompletableDeferred<Location>.createLocationListener(): LocationListener {
         return object : LocationListener {
-            override fun onLocationChanged(location: Location?) {
-                if (location == null) {
-                    completeExceptionally(LocationException("Location not found"))
-                } else {
-                    complete(location)
-                }
+            override fun onLocationChanged(location: Location) {
+                complete(location)
             }
 
             override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
                 completeExceptionally(LocationException("Status $provider changed: $status with extras $extras"))
             }
 
-            override fun onProviderEnabled(provider: String?) {
+            override fun onProviderEnabled(provider: String) {
                 completeExceptionally(LocationException("Provider $provider enabled"))
             }
 
-            override fun onProviderDisabled(provider: String?) {
+            override fun onProviderDisabled(provider: String) {
                 completeExceptionally(LocationException("Provider $provider disabled"))
             }
         }

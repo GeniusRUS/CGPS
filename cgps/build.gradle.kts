@@ -12,7 +12,7 @@ buildscript {
 plugins {
     id("com.jfrog.bintray")
     id("com.github.dcendents.android-maven")
-    id("org.jetbrains.dokka") version "1.4.10"
+    id("org.jetbrains.dokka") version "1.4.10.2"
     id("com.android.library")
     kotlin("android")
     kotlin("android.extensions")
@@ -28,7 +28,7 @@ extra.apply{
     set("libraryName", "cgps")
     set("publishedGroupId", "com.geniusrus.cgps")
     set("artifact", "cgps")
-    set("libraryVersion", "1.6.3")
+    set("libraryVersion", "1.6.4")
     set("libraryDescription", "Android location library on coroutines")
     set("siteUrl", "https://github.com/GeniusRUS/CGPS")
     set("gitUrl", "https://github.com/GeniusRUS/CGPS.git")
@@ -64,9 +64,13 @@ android {
     lintOptions {
         isAbortOnError = false
     }
+
+    buildFeatures {
+        buildConfig = false
+    }
 }
 
-val verCoroutinesStuff = "1.3.9"
+val verCoroutinesStuff = "1.4.1"
 
 dependencies {
     implementation("androidx.appcompat:appcompat:1.2.0")

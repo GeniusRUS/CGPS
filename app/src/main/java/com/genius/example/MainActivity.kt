@@ -87,7 +87,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                     val requestTime = measureTimeMillis {
                         val location: Location? = CGGPS(this@MainActivity).actualLocationWithEnable()
                         val address = withContext(Dispatchers.IO) { location?.toAddress(this@MainActivity) }
-                        this.appendln(location?.printInfo(address))
+                        this.appendLine(location?.printInfo(address))
                     }
                     this.append("Done in $requestTime milliseconds")
                 }

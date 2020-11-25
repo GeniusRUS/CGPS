@@ -153,7 +153,7 @@ class CGGPS(private val context: Context) {
     @Throws(LocationException::class, SecurityException::class, TimeoutException::class, ServicesAvailabilityException::class)
     suspend fun actualLocationWithEnable(@Accuracy accuracy: Int = Accuracy.BALANCED,
                                          requestCode: Int = 10414,
-                                         @IntRange(from = 0) timeout: Long = 5_000L): Location? {
+                                         @IntRange(from = 0) timeout: Long = 5_000L): Location {
         val settingsRequest = LocationSettingsRequest.Builder()
             .addLocationRequest(createRequest(accuracy, timeout, timeout, 1))
             .build()
