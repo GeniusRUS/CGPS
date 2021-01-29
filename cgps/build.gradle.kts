@@ -1,3 +1,4 @@
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
 import org.jetbrains.kotlin.config.KotlinCompilerVersion
 
 buildscript {
@@ -11,33 +12,10 @@ buildscript {
 
 plugins {
     id("com.jfrog.bintray")
-    id("com.github.dcendents.android-maven")
-    id("org.jetbrains.dokka") version "1.4.10.2"
+    id("maven-publish")
     id("com.android.library")
     kotlin("android")
-    kotlin("android.extensions")
-}
-
-tasks.dokkaJavadoc.configure {
-    outputDirectory.set(buildDir.resolve("javadoc"))
-}
-
-extra.apply{
-    set("bintrayRepo", "CGPS")
-    set("bintrayName", "com.geniusrus.cgps")
-    set("libraryName", "cgps")
-    set("publishedGroupId", "com.geniusrus.cgps")
-    set("artifact", "cgps")
-    set("libraryVersion", "1.6.4")
-    set("libraryDescription", "Android location library on coroutines")
-    set("siteUrl", "https://github.com/GeniusRUS/CGPS")
-    set("gitUrl", "https://github.com/GeniusRUS/CGPS.git")
-    set("developerId", "GeniusRUS")
-    set("developerName", "Viktor Likhanov")
-    set("developerEmail", "Gen1usRUS@yandex.ru")
-    set("licenseName", "The Apache Software License, Version 2.0")
-    set("licenseUrl", "http://www.apache.org/licenses/LICENSE-2.0.txt")
-    set("allLicenses", arrayOf("Apache-2.0"))
+    id("org.jetbrains.dokka") version "1.4.20"
 }
 
 android {
@@ -46,7 +24,7 @@ android {
         minSdkVersion(16)
         targetSdkVersion(30)
         versionCode = 1
-        versionName = extra.get("libraryVersion") as String
+        versionName = "1.7.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -70,7 +48,7 @@ android {
     }
 }
 
-val verCoroutinesStuff = "1.4.1"
+val verCoroutinesStuff = "1.4.2"
 
 dependencies {
     implementation("androidx.appcompat:appcompat:1.2.0")
@@ -89,20 +67,102 @@ dependencies {
     androidTestImplementation("androidx.test:rules:1.3.0")
 }
 
-/**
- * Создаёт JAR-файл библиотеки в cgps/libs/jar
- */
-task<Copy>("createJarRelease") {
-    from("$buildDir/intermediates/intermediate-jars/release/")
-    into("libs/jar")
-    include("classes.jar")
-    rename("classes.jar", "CGPS.jar")
-    exclude("**/BuildConfig.class")
-    exclude("**/R.class")
-    exclude("**/R$*.class")
+group = "com.geniusrus.cgps"
+version = android.defaultConfig.versionName.toString()
+
+tasks {
+    dokkaJavadoc.configure {
+        outputDirectory.set(buildDir.resolve("javadoc"))
+        dokkaSourceSets {
+            configureEach {
+                sourceLink {
+                    localDirectory.set(file("src/main/java"))
+                    remoteUrl.set(uri("https://github.com/GeniusRUS/CGPS/tree/master/cgps/src/main/java").toURL())
+                    remoteLineSuffix.set("#L")
+                }
+            }
+        }
+    }
+
+    register("androidJavadocJar", Jar::class) {
+        archiveClassifier.set("javadoc")
+        from("$buildDir/javadoc")
+        dependsOn(dokkaJavadoc)
+    }
+
+    register("androidSourcesJar", Jar::class) {
+        archiveClassifier.set("sources")
+        from(android.sourceSets.getByName("main").java.srcDirs)
+    }
 }
 
-if (project.rootProject.file("local.properties").exists()) {
-    apply("https://raw.githubusercontent.com/nuuneoi/JCenter/master/installv1.gradle")
-    apply("https://raw.githubusercontent.com/nuuneoi/JCenter/master/bintrayv1.gradle")
+publishing {
+    publications {
+        register<MavenPublication>("CGPSLibrary") {
+            artifactId = "cgps"
+
+            afterEvaluate { artifact(tasks.getByName("bundleReleaseAar")) }
+            artifact(tasks.getByName("androidJavadocJar"))
+            artifact(tasks.getByName("androidSourcesJar"))
+
+            pom {
+                name.set("CGPS")
+                description.set("Android location library on coroutines")
+                url.set("https://github.com/GeniusRUS/CGPS")
+
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("GeniusRUS")
+                        name.set("Viktor Likhanov")
+                        email.set("Gen1usRUS@yandex.ru")
+                    }
+                }
+                scm {
+                    connection.set("git://github.com/GeniusRUS/CGPS.git")
+                    developerConnection.set("git://github.com/GeniusRUS/CGPS.git")
+                    url.set("https://github.com/GeniusRUS/CGPS")
+                }
+
+                // Saving external dependencies list into .pom-file
+                withXml {
+                    fun groovy.util.Node.addDependency(dependency: Dependency, scope: String) {
+                        appendNode("dependency").apply {
+                            appendNode("groupId", dependency.group)
+                            appendNode("artifactId", dependency.name)
+                            appendNode("version", dependency.version)
+                            appendNode("scope", scope)
+                        }
+                    }
+
+                    asNode().appendNode("dependencies").let { dependencies ->
+                        // List all "api" dependencies as "compile" dependencies
+                        configurations.api.get().allDependencies.forEach {
+                            dependencies.addDependency(it, "compile")
+                        }
+                        // List all "implementation" dependencies as "runtime" dependencies
+                        configurations.implementation.get().allDependencies.forEach {
+                            dependencies.addDependency(it, "runtime")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            name = "bintray"
+            credentials {
+                username = gradleLocalProperties(rootDir).getProperty("bintray.user")
+                password = gradleLocalProperties(rootDir).getProperty("bintray.apikey")
+            }
+            url = uri("https://api.bintray.com/maven/geniusrus/CGPS/$group/;publish=1")
+        }
+    }
 }

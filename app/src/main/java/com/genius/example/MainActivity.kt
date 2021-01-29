@@ -9,11 +9,13 @@ import android.location.Location
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import android.util.Log
+import android.widget.Button
+import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import com.genius.cgps.CGGPS
 import com.genius.cgps.toAddress
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 
-import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import java.io.BufferedWriter
@@ -34,20 +36,30 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     private var currentStep = 0
     private val formatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
+    private var fab: FloatingActionButton? = null
+    private var btnService: Button? = null
+    private var btnLocationUpdates: Button? = null
+    private var tvHello: TextView? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        fab.setOnClickListener { singleUpdate() }
-        b_service.setOnClickListener { serviceAction() }
-        b_location_updates.setOnClickListener {
+        fab = findViewById(R.id.fab)
+        btnService = findViewById(R.id.b_service)
+        btnLocationUpdates = findViewById(R.id.b_location_updates)
+        tvHello = findViewById(R.id.tv_hello)
+
+        fab?.setOnClickListener { singleUpdate() }
+        btnService?.setOnClickListener { serviceAction() }
+        btnLocationUpdates?.setOnClickListener {
             if (updates?.isActive != true) {
-                b_location_updates.setText(R.string.action_stop)
+                btnLocationUpdates?.setText(R.string.action_stop)
                 startUpdates()
             } else {
                 updates?.cancel()
-                b_location_updates.setText(R.string.action_start)
-                tv_hello.setText(R.string.info_stopped)
+                btnLocationUpdates?.setText(R.string.action_start)
+                tvHello?.setText(R.string.info_stopped)
             }
         }
     }
@@ -85,9 +97,9 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             val message = try {
                 buildString {
                     val requestTime = measureTimeMillis {
-                        val location: Location? = CGGPS(this@MainActivity).actualLocationWithEnable()
-                        val address = withContext(Dispatchers.IO) { location?.toAddress(this@MainActivity) }
-                        this.appendLine(location?.printInfo(address))
+                        val location: Location = CGGPS(this@MainActivity).actualLocationWithEnable()
+                        val address = withContext(Dispatchers.IO) { location.toAddress(this@MainActivity) }
+                        this.appendLine(location.printInfo(address))
                     }
                     this.append("Done in $requestTime milliseconds")
                 }
@@ -97,7 +109,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                 e.message ?: "Empty error"
             }
 
-            tv_hello.text = message
+            tvHello?.text = message
         }
     }
 
@@ -120,7 +132,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             |Speed: ${location.speed}
             |Altitude: ${location.altitude}""".trimMargin()
 
-                    tv_hello.text = message
+                    tvHello?.text = message
                     logEvent(message)
                     currentStep++
                 }
@@ -129,7 +141,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                     val message = """Step $currentStep in ${formatter.format(Date())}
                 |
                 |${error.message ?: "Empty message"}""".trimMargin()
-                    tv_hello.text = message
+                    tvHello?.text = message
                     logEvent(message)
                     currentStep++
                 }

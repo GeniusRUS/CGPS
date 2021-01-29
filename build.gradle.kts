@@ -2,18 +2,16 @@
 
 buildscript {
     extra.apply{
-        set("dokka_version", "1.4.10.2")
+        set("dokka_version", "1.4.20")
     }
     repositories {
         google()
         jcenter()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:4.1.1")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.20")
-
-        classpath("com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.4")
-        classpath("com.github.dcendents:android-maven-gradle-plugin:2.1")
+        classpath("com.android.tools.build:gradle:4.1.2")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.21")
+        classpath("com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.5")
     }
 }
 

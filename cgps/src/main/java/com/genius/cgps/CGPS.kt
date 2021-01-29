@@ -167,13 +167,6 @@ class CGPS(private val context: Context) {
         }
     }
 
-    private fun CompletableDeferred<Location>.cancelWithTimeout(listener: LocationListener, timeout: Long) {
-        if (isActive) {
-            manager?.removeUpdates(listener)
-            completeExceptionally(TimeoutException("Location timeout on $timeout ms"))
-        }
-    }
-
     private fun Accuracy.toCriteria(): Criteria = Criteria().apply {
         accuracy = accuracy
         isCostAllowed = true

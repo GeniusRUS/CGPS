@@ -19,6 +19,7 @@ import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
+import com.google.android.gms.tasks.CancellationTokenSource
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
@@ -111,20 +112,20 @@ class CGGPS(private val context: Context) {
         } else if (!checkPermission(context, false)) {
             coroutine.completeExceptionally(SecurityException("Permissions for GPS was not given"))
         } else {
-            val listener = CGPSCallback(coroutine, null)
-
-            requestLocationUpdates(listener, accuracy, timeout, timeout, 1)
+            val cancellationTokenSource = CancellationTokenSource()
+            val locationTask = fusedLocation.getCurrentLocation(accuracy, cancellationTokenSource.token)
 
             try {
                 withTimeout(timeout) {
-                    coroutine.await()
+                    val location = locationTask.await()
+                    coroutine.complete(location)
                 }
             } catch (e: TimeoutCancellationException) {
                 if (coroutine.isActive) {
                     coroutine.completeExceptionally(TimeoutException("Location timeout on $timeout ms"))
                 }
             } finally {
-                fusedLocation.removeLocationUpdates(listener)
+                cancellationTokenSource.cancel()
             }
         }
 
