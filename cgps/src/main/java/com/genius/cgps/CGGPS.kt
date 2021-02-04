@@ -3,7 +3,6 @@
 package com.genius.cgps
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.IntentSender
@@ -14,6 +13,7 @@ import android.os.Looper
 import androidx.annotation.IntDef
 import androidx.annotation.IntRange
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.api.ApiException
@@ -30,35 +30,41 @@ import kotlinx.coroutines.withTimeout
 import java.util.concurrent.TimeoutException
 
 /**
- * Класс, осуществляющий получение координат пользователя различными возможными способами через
- * внутренние службы GooglePlay
+ * A class that obtains user coordinates in various possible ways through internal GooglePlay services
  *
- * Как правило, работа именно через него предпочтительнее, чем с [CGPS], потому что сервисы GooglePlay
- * кэшируют геолокацию пользователя и, таким образом, сокращают потребление батареи и увеличивают скорость
- * получения геолокации пользователя
+ * As a rule, it is preferable to work through it than with [CGPS],
+ * because GooglePlay services cache the user's geolocation, reusing it and, thus,
+ * reduce battery consumption and increase the speed of obtaining the user's geolocation
  *
- * Однако их связанность с сервисами означает, что на устройствах без поддержки GooglePlay данный класс
- * работать не будет и будет выдавать ошибки [ServicesAvailabilityException] для всех методов
+ * However, their connection with services means that this class will not work on devices without
+ * GooglePlay support and will throw [ServicesAvailabilityException] errors for all methods
  *
- * @property context необходима для проверки разрешений, наличия сервисов GooglePlay
- * @constructor принимает в себя экземпляр [Context] для работы с системной службой геолокации
+ * @property context is needed to check permissions and for the presence of GooglePlay services
+ * @constructor receiving [Context] instance for working with Android geolocation service
+ * @constructor receiving [Fragment] instance to handle scenario with enabling GPS-adapter in flow
  *
- * @author Виктор Лиханов
+ * @author Viktor Likhanov
  */
 class CGGPS(private val context: Context) {
 
+    constructor(fragment: Fragment): this(fragment.requireContext()) {
+        this.fragment = fragment
+    }
+
+    private var fragment: Fragment? = null
     private val fusedLocation: FusedLocationProviderClient by lazy { LocationServices.getFusedLocationProviderClient(context) }
     private val settings: SettingsClient by lazy { LocationServices.getSettingsClient(context) }
     private val location: LocationManager? by lazy { context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager }
 
     /**
-     * Получает последнюю известную локацию пользователя из сервисов GooglePlay
+     * Getting last known location of user by GooglePlay services
+     * It can be cache from other applications during getting location to them
      *
-     * @return [Location] локация пользователя
-     * @throws LocationException в случае неопределенных ошибок. В таком случае в [LocationException.message] пишется причина
-     * @throws ServicesAvailabilityException в случае, если на устройстве отсутствуют сервисы GooglePlay
-     * @throws LocationDisabledException в случае выключенного GPS-адаптера
-     * @throws SecurityException в случае отсутствующих разрешений на получение геолокации
+     * @return [Location] location of user
+     * @throws LocationException on undefined errors. In this case, the reason is written in [LocationException.message]
+     * @throws ServicesAvailabilityException in case there are no GooglePlay services on the device
+     * @throws LocationDisabledException in case of disabled GPS adapter
+     * @throws SecurityException in case of missing permissions to get geolocation
      */
     @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, ServicesAvailabilityException::class)
     suspend fun lastLocation(): Location {
@@ -84,20 +90,20 @@ class CGGPS(private val context: Context) {
     }
 
     /**
-     * Получает актуальную локацию пользователя из сервисов GooglePlay
+     * Retrieves the user's current location from GooglePlay services
      *
-     * Для гибкости запроса локации можно указать [accuracy], [timeout]
+     * For flexibility of the location request, you can specify [accuracy], [timeout]
      *
-     * Этапы проверки и возможные выбрасывания ошибок совпадают с очередностью описания ошибок ниже
+     * The steps of checking and possible exceptions are the same as the order of the error descriptions below.
      *
-     * @param accuracy точность полученных координат. Значение по умолчанию [LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY]
-     * @param timeout таймаут на получение координат. Значение по умолчанию 5000 миллисекунд
-     * @return [Location] локация пользователя
-     * @throws LocationException в случае неопределенных ошибок. В таком случае в [LocationException.message] пишется причина
-     * @throws ServicesAvailabilityException в случае, если на устройстве отсутствуют сервисы GooglePlay
-     * @throws LocationDisabledException в случае выключенного GPS-адаптера
-     * @throws SecurityException в случае отсутствующих разрешений на получение геолокации
-     * @throws TimeoutException в случае, если превышено время ожидания запроса геолокациии
+     * @param accuracy The accuracy of the obtained coordinates. Default value is [LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY]
+     * @param timeout timeout for getting coordinates. The default is 5000 milliseconds
+     * @return [Location] location of user
+     * @throws LocationException on undefined errors. In this case, the reason is written in [LocationException.message]
+     * @throws ServicesAvailabilityException in case there are no GooglePlay services on the device
+     * @throws LocationDisabledException in case of disabled GPS adapter
+     * @throws SecurityException in case of missing permissions to get geolocation
+     * @throws TimeoutException in case the geolocation request timed out
      */
     @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, TimeoutException::class, ServicesAvailabilityException::class)
     suspend fun actualLocation(@Accuracy accuracy: Int = Accuracy.BALANCED,
@@ -133,23 +139,24 @@ class CGGPS(private val context: Context) {
     }
 
     /**
-     * Получает актуальную локацию пользователя из сервисов GooglePlay
-     * В случае, если на устройстве отключен GPS-адаптер, то следует запрос на включение через создание интента в GooglePlay сервисах
+     * Receives the user's current location from GooglePlay services.
+     * If the GPS adapter is disabled on the device, then a request for enabling via creating an intent by GooglePlay services follows
      *
-     * Для полноценной его работы требуется реализовать в [Activity.onActivityResult] метод проверки соответствия
-     * запрошенного [requestCode] и результирующего кода, который в случае успешного включения адаптера, будет равен [Activity.RESULT_OK]
+     * For its full-fledged operation, it is required to implement in [Activity.onActivityResult] of [Fragment.onActivityResult]
+     * a method for checking the correspondence of the requested [requestCode] and the resulting code, which,
+     * if the adapter is successfully enabled, will be equal to [Activity.RESULT_OK]
      *
-     * Для гибкости запроса локации можно указать [accuracy], [timeout]
+     * For flexibility of the location request, you can specify [accuracy], [timeout]
      *
-     * @param accuracy точность полученных координат. Значение по умолчанию [LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY]
-     * @param requestCode код запроса на получение результата включения [LocationManager]. Значение по умолчанию 10414
-     * @param timeout таймаут на получение координат. Значение по умолчанию 5000 миллисекунд
-     * @return [Location] локация пользователя
-     * @throws LocationException в случае неопределенных ошибок. В таком случае в [LocationException.message] пишется причина
-     * @throws SecurityException в случае отсутствующих разрешений на получение геолокации
-     * @throws TimeoutException в случае, если превышено время ожидания запроса геолокациии
-     * @throws ServicesAvailabilityException в случае, если на устройстве отсутствуют сервисы GooglePlay
-     * @throws ResolutionNeedException в случае, если требуется подверждение включения GPS-адаптера пользователем
+     * @param accuracy The accuracy of the obtained coordinates. Default value is [LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY]
+     * @param requestCode request code for receiving the result of the [LocationManager] inclusion. Default value 10414
+     * @param timeout timeout for getting coordinates. The default is 5000 milliseconds
+     * @return [Location] location of user
+     * @throws LocationException on undefined errors. In this case, the reason is written in [LocationException.message]
+     * @throws SecurityException in case of missing permissions to get geolocation
+     * @throws TimeoutException in case the geolocation request timed out
+     * @throws ServicesAvailabilityException in case there are no GooglePlay services on the device
+     * @throws ResolutionNeedException if confirmation of enabling the GPS adapter by the user is required
      */
     @Throws(LocationException::class, SecurityException::class, TimeoutException::class, ServicesAvailabilityException::class)
     suspend fun actualLocationWithEnable(@Accuracy accuracy: Int = Accuracy.BALANCED,
@@ -164,16 +171,28 @@ class CGGPS(private val context: Context) {
         } catch (e: Exception) {
             when (val statusCode = (e as? ApiException)?.statusCode) {
                 LocationSettingsStatusCodes.RESOLUTION_REQUIRED -> {
-                    if (context is Activity) {
-                        try {
-                            val rae = e as ResolvableApiException
-                            rae.startResolutionForResult(context, requestCode)
-                            throw ResolutionNeedException(requestCode)
-                        } catch (sie: IntentSender.SendIntentException) {
-                            throw LocationException("Cannot find activity for resolve GPS enable intent")
+                    when {
+                        fragment != null -> {
+                            try {
+                                val rae = e as ResolvableApiException
+                                fragment?.startIntentSenderForResult(rae.resolution.intentSender, requestCode, null, 0, 0, 0, null)
+                                throw ResolutionNeedException(requestCode)
+                            } catch (sie: IntentSender.SendIntentException) {
+                                throw LocationException("Cannot find activity for resolve GPS enable intent")
+                            }
                         }
-                    } else {
-                        throw LocationException("Received context is not Activity. Please call this method with Activity instance")
+                        context is Activity -> {
+                            try {
+                                val rae = e as ResolvableApiException
+                                context.startIntentSenderForResult(rae.resolution.intentSender, requestCode, null, 0, 0, 0, null)
+                                throw ResolutionNeedException(requestCode)
+                            } catch (sie: IntentSender.SendIntentException) {
+                                throw LocationException("Cannot find activity for resolve GPS enable intent")
+                            }
+                        }
+                        else -> {
+                            throw LocationException("Received context is not Activity and fragment argument not passed in constructor. Please create instance with Fragment-argument constructor or Activity instance")
+                        }
                     }
                 }
                 null -> throw e
@@ -185,19 +204,18 @@ class CGGPS(private val context: Context) {
     }
 
     /**
-     * Получает актуальную локацию пользователя из сервисов GooglePlay
-     * В случае, если на устройстве отключен GPS-адаптер, то следует запрос на включение через запрос GooglePlay сервисов
+     * Creates a data stream in which, after a [interval] period, it makes requests to update the device's geolocation
      *
-     * Для гибкости запроса локации можно указать [accuracy], [timeout]
+     * For flexibility of the location request, you can specify [accuracy], [timeout]
      *
-     * По окончанию работы по получению координат закрывает [SendChannel] и отписывает [LocationManager] от своего слушателя
+     * At the end of the work on receiving coordinates, closes [SendChannel] and unsubscribes [LocationManager] from its listener
      *
-     * @param accuracy точность полученных координат. Значение по умолчанию [LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY]
-     * @param timeout таймаут на получение координат. Значение по умолчанию 5000 миллисекунд
-     * @param interval интервал времени для получения координат. Значение по умолчанию 5000 миллисекунд
-     * @return [flow] поток с результатами [Result]
-     * @throws ServicesAvailabilityException в случае, если на устройстве отсутствуют сервисы GooglePlay
-     * @throws SecurityException в случае отсутствующих разрешений на получение геолокации
+     * @param accuracy The accuracy of the obtained coordinates. Default value is [LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY]
+     * @param timeout timeout for getting coordinates. The default is 5000 milliseconds
+     * @param interval time interval for getting coordinates. The default is 5000 milliseconds
+     * @return [flow] channel of data with [Result] instances
+     * @throws ServicesAvailabilityException in case there are no GooglePlay services on the device
+     * @throws SecurityException in case of missing permissions to get geolocation
      */
     fun requestUpdates(@Accuracy accuracy: Int = Accuracy.BALANCED,
                        @IntRange(from = 0) timeout: Long = 5_000L,
@@ -214,7 +232,9 @@ class CGGPS(private val context: Context) {
 
         val locationListener = CGPSCallback(null, updateChannel)
 
-        requestLocationUpdates(locationListener, accuracy, interval, timeout)
+        val request = createRequest(accuracy, interval, timeout)
+
+        fusedLocation.requestLocationUpdates(request, locationListener, Looper.getMainLooper())
 
         try {
             for (location in updateChannel) {
@@ -223,17 +243,6 @@ class CGGPS(private val context: Context) {
         } finally {
             fusedLocation.removeLocationUpdates(locationListener)
         }
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun requestLocationUpdates(listener: LocationCallback,
-                                       @Accuracy accuracy: Int,
-                                       interval: Long,
-                                       timeout: Long,
-                                       updates: Int? = null) {
-        val request = createRequest(accuracy, interval, timeout, updates)
-
-        fusedLocation.requestLocationUpdates(request, listener, Looper.getMainLooper())
     }
 
     private fun createRequest(@Accuracy accuracy: Int,
@@ -294,15 +303,15 @@ fun isGooglePlayServicesAvailable(context: Context): Boolean {
 }
 
 /**
- * Внутренняя функция для проверки выданных соответствующих разрешений приложению
+ * Internal function to check the issued appropriate permissions for the application
  *
- * В зависимости от флага [isCoarse] проверяется наличие выданных разрешений:
- * true - [Manifest.permission.ACCESS_COARSE_LOCATION] - смотрится приблизительная геолокация
- * false - [Manifest.permission.ACCESS_FINE_LOCATION] - смотрится наиболее точная геолокация
+ * Depending on the [isCoarse] flag, the presence of issued permissions is checked:
+ * true - [Manifest.permission.ACCESS_COARSE_LOCATION] - find approximate geolocation
+ * false - [Manifest.permission.ACCESS_FINE_LOCATION] - find the most accurate geolocation
  *
- * @param context служит для получения доступа к данным приложения
- * @param isCoarse служит для уточнения проверяемых разрешений
- * @return предоставлено (true) или нет (false) ли разрешение для переданных аргументов
+ * @param context serves to gain access to geolocation services
+ * @param isCoarse serves to clarify verifiable permissions
+ * @return Depending on the [isCoarse] flag, the existence of issued permissions is checked: granted (true) or not (false) whether permission for the passed arguments
  */
 internal fun checkPermission(context: Context, isCoarse: Boolean) = if (isCoarse) {
     ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -314,25 +323,25 @@ internal fun isLocationEnabled(manager: LocationManager?) = manager?.isProviderE
     || manager?.isProviderEnabled(LocationManager.GPS_PROVIDER) ?: false
 
 /**
- * Выбрасывается в случае прочих причин, из-за которых невозможно получить геолокацию пользователя
- * @constructor принимает в себя non-null [message] причину ошибки
- * @param message - причина ошибки в текстовом представлении
+ * Thrown out in case of other reasons due to which it is impossible to get the user's geolocation
+ * @constructor receives a non-null [message] reason for the error
+ * @param message reason for error in text representation
  */
 class LocationException(message: String) : Exception(message)
 
 /**
- * Выбрасывается в случае, если у пользователя выключен GPS-адаптер на устройстве
+ * Thrown out if the user has disabled the GPS adapter on the device
  */
 class LocationDisabledException : Exception("Location adapter turned off on device")
 
 /**
- * Выбрасывается в случае, если у пользователя на устройстве не доступны GooglePlay сервисы
+ * Thrown out if GooglePlay services are not available on the user's device
  */
 class ServicesAvailabilityException : Exception("Google services is not available on this device")
 
 /**
- * Выбрасывается в случае, если требуется ручное включение пользователем GPS-адаптера с помощью диалога от GooglePlay сервисов
- * @constructor принимает в себя non-null код запроса
- * @param code - код запроса на включение GPS-адаптера пользователем
+ * Thrown out if manual activation of the GPS adapter by the user is required using a dialog from GooglePlay services
+ * @constructor takes in a non-null request code
+ * @param code request code for enabling the GPS adapter by the user
  */
 class ResolutionNeedException(code: Int) : Exception("Inclusion permission requested with request code: $code")
