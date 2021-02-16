@@ -51,9 +51,16 @@ val location = CGGPS(context).actualLocationWithEnable()
 **NOTE**: In onActivityResult you must handle the call in `itActivityResult` with the passed `requestCode`
 
 ## Install
+Artifact is publishing to Maven Central. You can add this repository to your project with:
+```gradle
+repositories {
+    mavenCentral()
+}
+```
+
 Add to your .gradle file:
 ```gradle
-implementation "com.geniusrus.cgps:cgps:$last_version"
+implementation "io.github.geniusrus:cgps:$last_version"
 ```
 ## Sample
 The sample is on `app` module
