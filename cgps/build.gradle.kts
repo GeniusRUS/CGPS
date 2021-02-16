@@ -1,3 +1,4 @@
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
 import org.jetbrains.kotlin.config.KotlinCompilerVersion
 
 buildscript {
@@ -7,7 +8,7 @@ buildscript {
         }
     }
     dependencies {
-        classpath("com.vanniktech:gradle-maven-publish-plugin:0.13.0")
+        classpath("com.vanniktech:gradle-maven-publish-plugin:0.14.2")
     }
 }
 
@@ -29,7 +30,7 @@ android {
         minSdkVersion(16)
         targetSdkVersion(30)
         versionCode = 1
-        versionName = "1.8.0"
+        versionName = gradleLocalProperties(rootDir).getProperty("VERSION_NAME")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
