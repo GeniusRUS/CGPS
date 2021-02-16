@@ -30,7 +30,7 @@ android {
         minSdkVersion(16)
         targetSdkVersion(30)
         versionCode = 1
-        versionName = gradleLocalProperties(rootDir).getProperty("VERSION_NAME")
+        versionName = project.property("VERSION_NAME") as String
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
