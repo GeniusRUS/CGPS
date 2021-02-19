@@ -3,7 +3,6 @@
 package com.genius.cgps
 
 import android.Manifest
-import android.app.Activity
 import android.content.Context
 import android.content.IntentSender
 import android.content.pm.PackageManager
@@ -13,7 +12,6 @@ import android.os.Looper
 import androidx.annotation.IntDef
 import androidx.annotation.IntRange
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.api.ApiException
@@ -41,17 +39,11 @@ import java.util.concurrent.TimeoutException
  *
  * @property context is needed to check permissions and for the presence of GooglePlay services
  * @constructor receiving [Context] instance for working with Android geolocation service
- * @constructor receiving [Fragment] instance to handle scenario with enabling GPS-adapter in flow
  *
  * @author Viktor Likhanov
  */
 class CGGPS(private val context: Context) {
 
-    constructor(fragment: Fragment): this(fragment.requireContext()) {
-        this.fragment = fragment
-    }
-
-    private var fragment: Fragment? = null
     private val fusedLocation: FusedLocationProviderClient by lazy { LocationServices.getFusedLocationProviderClient(context) }
     private val settings: SettingsClient by lazy { LocationServices.getSettingsClient(context) }
     private val location: LocationManager? by lazy { context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager }
@@ -142,14 +134,12 @@ class CGGPS(private val context: Context) {
      * Receives the user's current location from GooglePlay services.
      * If the GPS adapter is disabled on the device, then a request for enabling via creating an intent by GooglePlay services follows
      *
-     * For its full-fledged operation, it is required to implement in [Activity.onActivityResult] of [Fragment.onActivityResult]
-     * a method for checking the correspondence of the requested [requestCode] and the resulting code, which,
-     * if the adapter is successfully enabled, will be equal to [Activity.RESULT_OK]
+     * For full-fledged work, you need to create an instance of the [androidx.activity.result.ActivityResultLauncher] class,
+     * which will receive an [IntentSender] instance if it is necessary to enable the adapter through Google services
      *
      * For flexibility of the location request, you can specify [accuracy], [timeout]
      *
      * @param accuracy The accuracy of the obtained coordinates. Default value is [LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY]
-     * @param requestCode request code for receiving the result of the [LocationManager] inclusion. Default value 10414
      * @param timeout timeout for getting coordinates. The default is 5000 milliseconds
      * @return [Location] location of user
      * @throws LocationException on undefined errors. In this case, the reason is written in [LocationException.message]
@@ -160,7 +150,6 @@ class CGGPS(private val context: Context) {
      */
     @Throws(LocationException::class, SecurityException::class, TimeoutException::class, ServicesAvailabilityException::class)
     suspend fun actualLocationWithEnable(@Accuracy accuracy: Int = Accuracy.BALANCED,
-                                         requestCode: Int = 10414,
                                          @IntRange(from = 0) timeout: Long = 5_000L): Location {
         val settingsRequest = LocationSettingsRequest.Builder()
             .addLocationRequest(createRequest(accuracy, timeout, timeout, 1))
@@ -171,28 +160,11 @@ class CGGPS(private val context: Context) {
         } catch (e: Exception) {
             when (val statusCode = (e as? ApiException)?.statusCode) {
                 LocationSettingsStatusCodes.RESOLUTION_REQUIRED -> {
-                    when {
-                        fragment != null -> {
-                            try {
-                                val rae = e as ResolvableApiException
-                                fragment?.startIntentSenderForResult(rae.resolution.intentSender, requestCode, null, 0, 0, 0, null)
-                                throw ResolutionNeedException(requestCode)
-                            } catch (sie: IntentSender.SendIntentException) {
-                                throw LocationException("Cannot find activity for resolve GPS enable intent")
-                            }
-                        }
-                        context is Activity -> {
-                            try {
-                                val rae = e as ResolvableApiException
-                                context.startIntentSenderForResult(rae.resolution.intentSender, requestCode, null, 0, 0, 0, null)
-                                throw ResolutionNeedException(requestCode)
-                            } catch (sie: IntentSender.SendIntentException) {
-                                throw LocationException("Cannot find activity for resolve GPS enable intent")
-                            }
-                        }
-                        else -> {
-                            throw LocationException("Received context is not Activity and fragment argument not passed in constructor. Please create instance with Fragment-argument constructor or Activity instance")
-                        }
+                    try {
+                        val rae = e as ResolvableApiException
+                        throw ResolutionNeedException(rae.resolution.intentSender)
+                    } catch (sie: IntentSender.SendIntentException) {
+                        throw LocationException("Cannot find activity for resolve GPS enable intent")
                     }
                 }
                 null -> throw e
@@ -341,7 +313,6 @@ class ServicesAvailabilityException : Exception("Google services is not availabl
 
 /**
  * Thrown out if manual activation of the GPS adapter by the user is required using a dialog from GooglePlay services
- * @constructor takes in a non-null request code
- * @param code request code for enabling the GPS adapter by the user
+ * @param intentSender GPS adapter enable call source
  */
-class ResolutionNeedException(code: Int) : Exception("Inclusion permission requested with request code: $code")
+class ResolutionNeedException(val intentSender: IntentSender) : Exception("Inclusion permission requested with intent sender")

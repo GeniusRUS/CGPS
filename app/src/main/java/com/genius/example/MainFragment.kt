@@ -11,10 +11,13 @@ import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.genius.cgps.CGGPS
+import com.genius.cgps.ResolutionNeedException
 import com.genius.cgps.toAddress
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import java.io.BufferedWriter
@@ -41,6 +44,26 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     private var btnService: Button? = null
     private var btnLocationUpdates: Button? = null
     private var tvHello: TextView? = null
+    private val singleUpdateCaller = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+        if (result[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+            singleUpdate()
+        }
+    }
+    private val resolveSingleCaller = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            singleUpdate()
+        }
+    }
+    private val updatesCaller = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+        if (result[Manifest.permission.ACCESS_FINE_LOCATION] == true && result[Manifest.permission.WRITE_EXTERNAL_STORAGE] == true) {
+            startUpdates()
+        }
+    }
+    private val serviceCaller = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+        if (result[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+            serviceAction()
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -64,46 +87,30 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (resultCode == Activity.RESULT_OK) {
-            singleUpdate()
-        }
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        if (requestCode == REQUEST_CODE_WRITE_STORAGE) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startUpdates()
-            }
-        } else if (requestCode == REQUEST_CODE_FINE_LOCATION) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                singleUpdate()
-            }
-        } else if (requestCode == REQUEST_CODE_FINE_LOCATION_TO_SERVICE) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                serviceAction()
-            }
-        }
-    }
-
+    @Suppress("BlockingMethodInNonBlockingContext")
     private fun singleUpdate() {
         lifecycleScope.launch {
-            if (!checkPermissionIsNeedToRequest(REQUEST_CODE_FINE_LOCATION)) return@launch
+            val permission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+            if (permission != PackageManager.PERMISSION_GRANTED) {
+                singleUpdateCaller.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
+                return@launch
+            }
 
             val message = try {
                 buildString {
                     val requestTime = measureTimeMillis {
-                        val location: Location = CGGPS(this@MainFragment).actualLocationWithEnable()
-                        val address = withContext(Dispatchers.IO) { location.toAddress(requireContext()) }
+                        val location: Location = CGGPS(requireContext()).actualLocationWithEnable()
+                        val address = withContext(Dispatchers.IO) {
+                            location.toAddress(requireContext())
+                        }
                         this.appendLine(location.printInfo(address))
                     }
                     this.append("Done in $requestTime milliseconds")
                 }
 
+            } catch (exceptionWithIntentSender: ResolutionNeedException) {
+                resolveSingleCaller.launch(IntentSenderRequest.Builder(exceptionWithIntentSender.intentSender).build())
+                "Please enable GPS adapter"
             } catch (e: Exception) {
                 Log.e("GPS ERROR", e.message, e)
                 e.message ?: "Empty error"
@@ -113,16 +120,17 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
     }
 
-    private fun startUpdates(): Boolean {
-        val permission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE)
-        if (permission != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), REQUEST_CODE_WRITE_STORAGE)
-            return false
+    private fun startUpdates() {
+        val finePermission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+        val writePermission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        if (finePermission != PackageManager.PERMISSION_GRANTED || writePermission != PackageManager.PERMISSION_GRANTED) {
+            updatesCaller.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE))
+            return
         }
 
         currentStep = 1
         updates = lifecycleScope.launch {
-            CGGPS(this@MainFragment).requestUpdates().collect { result ->
+            CGGPS(requireContext()).requestUpdates().collect { result ->
                 result.getOrNull()?.let { location ->
                     val message = """Step $currentStep in ${formatter.format(Date(location.time))}
             |
@@ -148,7 +156,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             }
         }
 
-        return true
+        return
     }
 
     private fun logEvent(text: String) {
@@ -175,23 +183,13 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     }
 
     private fun serviceAction() {
-        if (!checkPermissionIsNeedToRequest(REQUEST_CODE_FINE_LOCATION_TO_SERVICE)) return
+        val permission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            serviceCaller.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
+            return
+        }
         val serviceIntent = Intent(requireContext(), LocationService::class.java)
         requireContext().startService(serviceIntent)
-    }
-
-    private fun checkPermissionIsNeedToRequest(requestCode: Int): Boolean {
-        val permission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
-        return if (permission != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), requestCode)
-            false
-        } else true
-    }
-
-    companion object {
-        private const val REQUEST_CODE_WRITE_STORAGE = 1014
-        private const val REQUEST_CODE_FINE_LOCATION = 1015
-        private const val REQUEST_CODE_FINE_LOCATION_TO_SERVICE = 1016
     }
 }
 
