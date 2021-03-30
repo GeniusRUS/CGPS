@@ -61,13 +61,13 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$verCoroutinesStuff")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$verCoroutinesStuff")
     implementation(kotlin("stdlib-jdk7", KotlinCompilerVersion.VERSION))
-    implementation("androidx.activity:activity-ktx:1.2.0")
-    implementation("androidx.fragment:fragment-ktx:1.3.0")
+    implementation("androidx.activity:activity-ktx:1.2.2")
+    implementation("androidx.fragment:fragment-ktx:1.3.2")
 
-    implementation("com.google.android.gms:play-services-location:17.1.0")
+    implementation("com.google.android.gms:play-services-location:18.0.0")
 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.mockito:mockito-core:3.3.3")
+    testImplementation("org.mockito:mockito-core:3.7.7")
     testImplementation("androidx.test:core:1.3.0")
     androidTestImplementation("androidx.test.ext:junit:1.1.2")
     androidTestImplementation("androidx.test:runner:1.3.0")
