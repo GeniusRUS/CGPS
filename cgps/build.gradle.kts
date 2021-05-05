@@ -1,4 +1,3 @@
-import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
 import org.jetbrains.kotlin.config.KotlinCompilerVersion
 
 buildscript {
@@ -54,7 +53,7 @@ android {
     }
 }
 
-val verCoroutinesStuff = "1.4.2"
+val verCoroutinesStuff = "1.4.3"
 
 dependencies {
     implementation("androidx.appcompat:appcompat:1.2.0")
@@ -62,7 +61,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$verCoroutinesStuff")
     implementation(kotlin("stdlib-jdk7", KotlinCompilerVersion.VERSION))
     implementation("androidx.activity:activity-ktx:1.2.2")
-    implementation("androidx.fragment:fragment-ktx:1.3.2")
+    implementation("androidx.fragment:fragment-ktx:1.3.3")
 
     implementation("com.google.android.gms:play-services-location:18.0.0")
 

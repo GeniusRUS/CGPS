@@ -24,7 +24,7 @@ class LocationService : Service(), CoroutineScope {
 
     private val binder = LocalBinder()
 
-    override fun onBind(intent: Intent?): IBinder? {
+    override fun onBind(intent: Intent?): IBinder {
         return binder
     }
 

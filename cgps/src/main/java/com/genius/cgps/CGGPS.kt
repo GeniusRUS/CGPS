@@ -221,7 +221,7 @@ class CGGPS(private val context: Context) {
                               interval: Long,
                               timeout: Long,
                               updates: Int? = null): LocationRequest {
-        return LocationRequest().apply {
+        return LocationRequest.create().apply {
             updates?.let { count -> this.numUpdates = count }
             this.interval = interval
             this.maxWaitTime = timeout

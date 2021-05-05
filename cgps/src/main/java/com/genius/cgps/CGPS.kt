@@ -134,13 +134,13 @@ class CGPS(private val context: Context) {
      */
     fun requestUpdates(accuracy: Accuracy = Accuracy.COARSE,
                        @IntRange(from = 0) timeout: Long = 10_000L,
-                       @IntRange(from = 0) interval: Long = 5_000L) = flow {
+                       @IntRange(from = 0) interval: Long = 5_000L) = flow<Result<Location>> {
         while (true) {
             try {
                 val location = actualLocation(accuracy, timeout)
                 emit(Result.success(location))
             } catch (e: Exception) {
-                emit(Result.failure<Location>(e))
+                emit(Result.failure(e))
             }
 
             delay(interval)
