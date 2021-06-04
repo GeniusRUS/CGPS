@@ -234,20 +234,20 @@ class CGGPS(private val context: Context) {
         override fun onLocationResult(locationResult: LocationResult?) {
             locationResult?.locations?.getOrNull(0)?.let {
                 coroutine?.complete(it)
-                listener?.offer(Result.success(it))
+                listener?.trySend(Result.success(it))
             } ?: handleError()
         }
 
         override fun onLocationAvailability(locationStatus: LocationAvailability?) {
             if (locationStatus?.isLocationAvailable == false) {
                 coroutine?.completeExceptionally(LocationException("Location are unavailable with those settings"))
-                listener?.offer(Result.failure(LocationException("Location are unavailable with those settings")))
+                listener?.trySend(Result.failure(LocationException("Location are unavailable with those settings")))
             }
         }
 
         fun handleError() {
             coroutine?.completeExceptionally(LocationException("Location not found"))
-            listener?.offer(Result.failure(LocationException("Location not found")))
+            listener?.trySend(Result.failure(LocationException("Location not found")))
         }
     }
 
