@@ -1,22 +1,10 @@
 import org.jetbrains.kotlin.config.KotlinCompilerVersion
 
-buildscript {
-    repositories {
-        maven {
-            url = uri("https://plugins.gradle.org/m2/")
-        }
-    }
-    dependencies {
-        classpath("com.vanniktech:gradle-maven-publish-plugin:0.15.1")
-    }
-}
-
-apply(plugin = "com.vanniktech.maven.publish")
-
 plugins {
     id("com.android.library")
     kotlin("android")
     id("org.jetbrains.dokka")
+    id("com.vanniktech.maven.publish")
 }
 
 tasks.dokkaJavadoc.configure {
@@ -61,12 +49,12 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$verCoroutinesStuff")
     implementation(kotlin("stdlib-jdk7", KotlinCompilerVersion.VERSION))
     implementation("androidx.activity:activity-ktx:1.2.3")
-    implementation("androidx.fragment:fragment-ktx:1.3.4")
+    implementation("androidx.fragment:fragment-ktx:1.3.5")
 
     implementation("com.google.android.gms:play-services-location:18.0.0")
 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.mockito:mockito-core:3.9.0")
+    testImplementation("org.mockito:mockito-core:3.11.1")
     testImplementation("androidx.test:core:1.3.0")
     androidTestImplementation("androidx.test.ext:junit:1.1.2")
     androidTestImplementation("androidx.test:runner:1.3.0")
