@@ -2,6 +2,7 @@
 
 package com.genius.cgps
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.location.*
@@ -19,17 +20,30 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
+/**
+ * A class that uses the built-in location services in the Android framework
+ *
+ * Should be guaranteed to work on all devices that have a GPS module
+ *
+ * The use of this class is not as preferable as its analogue [CGGPS],
+ * since working with GPS directly is a very energy-intensive operation
+ *
+ * @property context is needed to check permissions and for working with system location services
+ * @constructor receiving [Context] instance for working with Android geolocation service
+ *
+ * @author Viktor Likhanov
+ */
 class CGPS(private val context: Context) {
 
     private val manager: LocationManager? by lazy { context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager }
 
     /**
-     * Получает последнюю известную локацию пользователя из GPS-адаптера устройства
+     * Retrieves the last known location of the user from the device's GPS adapter
      *
-     * @return [Location] локация пользователя
-     * @throws LocationException в случае неопределенных ошибок. В таком случае в [LocationException.message] пишется причина
-     * @throws LocationDisabledException в случае выключенного GPS-адаптера
-     * @throws SecurityException в случае отсутствующих разрешений на получение геолокации
+     * @return [Location] user location
+     * @throws LocationException in case of undefined errors. In this case, the reason is written in [LocationException.message]
+     * @throws LocationDisabledException in case of disabled GPS adapter
+     * @throws SecurityException in case of missing permission [Manifest.permission.ACCESS_COARSE_LOCATION] for obtaining geolocation
      */
     @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class)
     suspend fun lastLocation(accuracy: Accuracy = Accuracy.COARSE) = suspendCoroutine<Location> { coroutine ->
@@ -37,7 +51,7 @@ class CGPS(private val context: Context) {
             coroutine.resumeWithException(LocationException("Location manager not found"))
         } else if (!isLocationEnabled(manager)) {
             coroutine.resumeWithException(LocationDisabledException())
-        } else if (!checkPermission(context, true)) {
+        } else if (!context.checkPermission(true)) {
             coroutine.resumeWithException(SecurityException("Permissions for GPS was not given"))
         } else {
             val provider = manager?.getBestProvider(accuracy.toCriteria(), true)
@@ -55,19 +69,19 @@ class CGPS(private val context: Context) {
     }
 
     /**
-     * Получает актуальную локацию пользователя из GPS-сервиса устройства
+     * Receives the current location of the user from the device's GPS service
      *
-     * Для гибкости запроса локации можно указать [accuracy], [timeout]
+     * For flexibility in requesting a location, you can specify [accuracy], [timeout]
      *
-     * Этапы проверки и возможные выбрасывания ошибок совпадают с очередностью описания ошибок ниже
+     * The stages of checking and possible throwing of errors coincide with the order of the error descriptions below.
      *
-     * @param accuracy точность полученных координат. Значение по умолчанию [Accuracy.COARSE]
-     * @param timeout таймаут на получение координат. Значение по умолчанию 5000 миллисекунд
-     * @return [Location] локация пользователя
-     * @throws LocationException в случае неопределенных ошибок. В таком случае в [LocationException.message] пишется причина
-     * @throws LocationDisabledException в случае выключенного GPS-адаптера
-     * @throws SecurityException в случае отсутствующих разрешений на получение геолокации
-     * @throws TimeoutException в случае, если превышено время ожидания запроса геолокациии
+     * @param accuracy the accuracy of the obtained coordinates. The default is [Accuracy.COARSE]
+     * @param timeout timeout for getting coordinates. Default 5000 milliseconds
+     * @return [Location] user location
+     * @throws LocationException in case of undefined errors. In this case, the reason is written in [LocationException.message]
+     * @throws LocationDisabledException in case of disabled GPS adapter
+     * @throws SecurityException in case of missing permissions for obtaining geolocation
+     * @throws TimeoutException in case the timeout of the geolocation request has been exceeded
      */
     @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, TimeoutException::class)
     suspend fun actualLocation(accuracy: Accuracy = Accuracy.COARSE,
@@ -77,7 +91,7 @@ class CGPS(private val context: Context) {
             coroutine.completeExceptionally(LocationException("Location manager not found"))
         } else if (!isLocationEnabled(manager)) {
             coroutine.completeExceptionally(LocationDisabledException())
-        } else if (!checkPermission(context, false)) {
+        } else if (!context.checkPermission(false)) {
             coroutine.completeExceptionally(SecurityException("Permissions for GPS was not given"))
         } else {
             val listener = coroutine.createLocationListener()
@@ -117,24 +131,26 @@ class CGPS(private val context: Context) {
     }
 
     /**
-     * Получает актуальную локацию пользователя из GPS-сервиса устройства
+     * Receives the current location of the user from the device's GPS service
      *
-     * Для гибкости запроса локации можно указать [accuracy], [timeout]
+     * For flexibility in requesting a location, you can specify [accuracy], [timeout]
      *
-     * Так как возвращается экземпляр [Job], то существует механизм, которым можно управлять жизненным циклом этого объекта
+     * Since a [Job] instance is returned, there is a mechanism that can control the life cycle of this request
      *
-     * По окончанию работы по получению координат закрывает [SendChannel] и отписывает [LocationManager] от своего слушателя
+     * At the end of the work on receiving coordinates, it closes [SendChannel] and unsubscribes [LocationManager] from its listener
      *
-     * @param accuracy точность полученных координат. Значение по умолчанию [Accuracy.COARSE]
-     * @param timeout таймаут на получение координат. Значение по умолчанию 10_000 миллисекунд
-     * @param interval интервал времени для получения координат. Значение по умолчанию 5000 миллисекунд
-     * @return [flow] поток с результатами [Result]
-     * @throws ServicesAvailabilityException в случае, если на устройстве отсутствуют сервисы GooglePlay
-     * @throws SecurityException в случае отсутствующих разрешений на получение геолокации
+     * @param accuracy the accuracy of the obtained coordinates. The default is [Accuracy.COARSE]
+     * @param timeout timeout for getting coordinates. The default is 10_000 milliseconds
+     * @param interval time interval for getting coordinates. Default 5000 milliseconds
+     * @return [flow] stream with results [Result]
+     * @throws LocationException in case of undefined errors. In this case, the reason is written in [LocationException.message]
+     * @throws LocationDisabledException in case of disabled GPS adapter
+     * @throws SecurityException in case of missing permissions for obtaining geolocation
+     * @throws TimeoutException in case the timeout of the geolocation request has been exceeded
      */
     fun requestUpdates(accuracy: Accuracy = Accuracy.COARSE,
                        @IntRange(from = 0) timeout: Long = 10_000L,
-                       @IntRange(from = 0) interval: Long = 5_000L) = flow<Result<Location>> {
+                       @IntRange(from = 0) interval: Long = 5_000L) = flow {
         while (true) {
             try {
                 val location = actualLocation(accuracy, timeout)
@@ -180,23 +196,23 @@ class CGPS(private val context: Context) {
 }
 
 /**
- * Преобразование экземпляра класса [Location] в экземпляр класса [Address] с помощью встроенного геокодера системы
+ * Converting an instance of the [Location] class to an instance of the [Address] class using the system's built-in geocoder
  *
- * @return экземпляр класса [Address]
- * @receiver экземпляр класса [Location] для преобразования
- * @param context служит для вызова системного геокодера
- * @param locale существует возможность явно задать [Locale] для результатов геокодинга. По умолчанию значение [Locale.getDefault]
- * @throws IOException в случае внутренних ошибок геокодера
- * @throws IllegalArgumentException если [Location.getLatitude] меньше -90 или больше 90
- * @throws IllegalArgumentException если [Location.getLongitude] меньше -180 или больше 180
+ * @return an instance of the [Address] class
+ * @receiver an instance of the [Location] class to transform
+ * @param context serves to call the system geocoder
+ * @param locale it is possible to explicitly set [Locale] for geocoding results. The default is [Locale.getDefault]
+ * @throws IOException in case of internal errors of the geocoder
+ * @throws IllegalArgumentException if [Location.getLatitude] is not in range [-90..90]
+ * @throws IllegalArgumentException if [Location.getLongitude] is not in range [-180..180]
  */
 @WorkerThread
 @Throws(IOException::class)
 fun Location.toAddress(context: Context, locale: Locale = Locale.getDefault()): Address? = Geocoder(context, locale).getFromLocation(this.latitude, this.longitude, 1).firstOrNull()
 
 /**
- * Вызывает окно настроек геолокации системы
+ * Calls the system geolocation settings activity
  *
- * @receiver экземпляр класса [Location] для запуска экрана настроек системы
+ * @receiver an instance of the [Context] class to launch the system settings screen
  */
 fun Context.openSettings() = startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))

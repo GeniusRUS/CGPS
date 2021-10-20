@@ -47,6 +47,8 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     private val singleUpdateCaller = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         if (result[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
             singleUpdate()
+        } else if (result[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
+            tvHello?.text = getString(R.string.location_type_not_supported)
         }
     }
     private val resolveSingleCaller = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
@@ -57,11 +59,15 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     private val updatesCaller = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         if (result[Manifest.permission.ACCESS_FINE_LOCATION] == true && result[Manifest.permission.WRITE_EXTERNAL_STORAGE] == true) {
             startUpdates()
+        } else if (result[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
+            tvHello?.text = getString(R.string.location_type_not_supported)
         }
     }
     private val serviceCaller = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         if (result[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
             serviceAction()
+        } else if (result[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
+            tvHello?.text = getString(R.string.location_type_not_supported)
         }
     }
 
@@ -92,7 +98,12 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         lifecycleScope.launch {
             val permission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
             if (permission != PackageManager.PERMISSION_GRANTED) {
-                singleUpdateCaller.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
+                singleUpdateCaller.launch(
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    )
+                )
                 return@launch
             }
 
@@ -124,7 +135,13 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         val finePermission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
         val writePermission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE)
         if (finePermission != PackageManager.PERMISSION_GRANTED || writePermission != PackageManager.PERMISSION_GRANTED) {
-            updatesCaller.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE))
+            updatesCaller.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                )
+            )
             return
         }
 

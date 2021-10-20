@@ -67,7 +67,7 @@ class CGGPS(private val context: Context) {
             coroutine.completeExceptionally(ServicesAvailabilityException())
         } else if (!isLocationEnabled(location)) {
             coroutine.completeExceptionally(LocationDisabledException())
-        } else if (!checkPermission(context, true)) {
+        } else if (!context.checkPermission(true)) {
             coroutine.completeExceptionally(SecurityException("Permissions for GPS was not given"))
         } else {
             val location = fusedLocation.lastLocation.await()
@@ -94,7 +94,7 @@ class CGGPS(private val context: Context) {
      * @throws LocationException on undefined errors. In this case, the reason is written in [LocationException.message]
      * @throws ServicesAvailabilityException in case there are no GooglePlay services on the device
      * @throws LocationDisabledException in case of disabled GPS adapter
-     * @throws SecurityException in case of missing permissions to get geolocation
+     * @throws SecurityException in case of missing fine permissions to get geolocation [Manifest.permission.ACCESS_FINE_LOCATION]
      * @throws TimeoutException in case the geolocation request timed out
      */
     @Throws(LocationException::class, LocationDisabledException::class, SecurityException::class, TimeoutException::class, ServicesAvailabilityException::class)
@@ -107,7 +107,7 @@ class CGGPS(private val context: Context) {
             coroutine.completeExceptionally(ServicesAvailabilityException())
         } else if (!isLocationEnabled(location)) {
             coroutine.completeExceptionally(LocationDisabledException())
-        } else if (!checkPermission(context, false)) {
+        } else if (!context.checkPermission(false)) {
             coroutine.completeExceptionally(SecurityException("Permissions for GPS was not given"))
         } else {
             val cancellationTokenSource = CancellationTokenSource()
@@ -187,7 +187,7 @@ class CGGPS(private val context: Context) {
      * @param interval time interval for getting coordinates. The default is 5000 milliseconds
      * @return [flow] channel of data with [Result] instances
      * @throws ServicesAvailabilityException in case there are no GooglePlay services on the device
-     * @throws SecurityException in case of missing permissions to get geolocation
+     * @throws SecurityException in case of missing permissions to get fine geolocation [Manifest.permission.ACCESS_FINE_LOCATION]
      */
     fun requestUpdates(@Accuracy accuracy: Int = Accuracy.BALANCED,
                        @IntRange(from = 0) timeout: Long = 5_000L,
@@ -195,7 +195,7 @@ class CGGPS(private val context: Context) {
         if (!isGooglePlayServicesAvailable(context)) {
             emit(Result.failure(ServicesAvailabilityException()))
             return@flow
-        } else if (!checkPermission(context, false)) {
+        } else if (!context.checkPermission(false)) {
             emit(Result.failure(SecurityException("Permissions for GPS was not given")))
             return@flow
         }
@@ -281,14 +281,14 @@ fun isGooglePlayServicesAvailable(context: Context): Boolean {
  * true - [Manifest.permission.ACCESS_COARSE_LOCATION] - find approximate geolocation
  * false - [Manifest.permission.ACCESS_FINE_LOCATION] - find the most accurate geolocation
  *
- * @param context serves to gain access to geolocation services
+ * @receiver [Context] instance serves to gain access to geolocation services
  * @param isCoarse serves to clarify verifiable permissions
  * @return Depending on the [isCoarse] flag, the existence of issued permissions is checked: granted (true) or not (false) whether permission for the passed arguments
  */
-internal fun checkPermission(context: Context, isCoarse: Boolean) = if (isCoarse) {
-    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+internal fun Context.checkPermission(isCoarse: Boolean) = if (isCoarse) {
+    ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
 } else {
-    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 }
 
 internal fun isLocationEnabled(manager: LocationManager?) = manager?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) ?: false

@@ -12,10 +12,10 @@ tasks.dokkaJavadoc.configure {
 }
 
 android {
-    compileSdk = 30
+    compileSdk = 31
     defaultConfig {
         minSdk = 16
-        targetSdk = 30
+        targetSdk = 31
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -39,20 +39,20 @@ android {
     }
 }
 
-val verCoroutinesStuff = "1.5.1"
+val verCoroutinesStuff = "1.5.2"
 
 dependencies {
     implementation("androidx.appcompat:appcompat:1.3.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$verCoroutinesStuff")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$verCoroutinesStuff")
     implementation(kotlin("stdlib-jdk7", KotlinCompilerVersion.VERSION))
-    implementation("androidx.activity:activity-ktx:1.3.0")
+    implementation("androidx.activity:activity-ktx:1.3.1")
     implementation("androidx.fragment:fragment-ktx:1.3.6")
 
     implementation("com.google.android.gms:play-services-location:18.0.0")
 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.mockito:mockito-core:3.11.1")
+    testImplementation("org.mockito:mockito-core:4.0.0")
     testImplementation("androidx.test:core:1.4.0")
     androidTestImplementation("androidx.test.ext:junit:1.1.3")
     androidTestImplementation("androidx.test:runner:1.4.0")

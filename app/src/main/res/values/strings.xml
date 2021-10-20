@@ -8,4 +8,6 @@
     <string name="location_service_working">Location service is working</string>
     <string name="location_service_description_text">Channel for location service</string>
     <string name="stop_service_text">Stop service</string>
+
+    <string name="location_type_not_supported">Coarse location is not supported</string>
 </resources>
