@@ -11,11 +11,15 @@ tasks.dokkaJavadoc.configure {
     outputDirectory.set(buildDir.resolve("javadoc"))
 }
 
+mavenPublish {
+    androidVariantToPublish = "release"
+}
+
 android {
-    compileSdk = 31
+    compileSdk = 32
     defaultConfig {
         minSdk = 16
-        targetSdk = 31
+        targetSdk = 32
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -30,29 +34,25 @@ android {
         }
     }
 
-    lint {
-        isAbortOnError = false
-    }
-
     buildFeatures {
         buildConfig = false
     }
 }
 
-val verCoroutinesStuff = "1.5.2"
+val verCoroutinesStuff = "1.6.0"
 
 dependencies {
-    implementation("androidx.appcompat:appcompat:1.4.0")
+    implementation("androidx.appcompat:appcompat:1.4.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$verCoroutinesStuff")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$verCoroutinesStuff")
     implementation(kotlin("stdlib-jdk7", KotlinCompilerVersion.VERSION))
     implementation("androidx.activity:activity-ktx:1.4.0")
-    implementation("androidx.fragment:fragment-ktx:1.4.0")
+    implementation("androidx.fragment:fragment-ktx:1.4.1")
 
-    implementation("com.google.android.gms:play-services-location:18.0.0")
+    implementation("com.google.android.gms:play-services-location:19.0.1")
 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.mockito:mockito-core:4.1.0")
+    testImplementation("org.mockito:mockito-core:4.4.0")
     testImplementation("androidx.test:core:1.4.0")
     androidTestImplementation("androidx.test.ext:junit:1.1.3")
     androidTestImplementation("androidx.test:runner:1.4.0")

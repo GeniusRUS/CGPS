@@ -6,13 +6,18 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Address
 import android.location.Location
+import android.os.Build
+import android.os.Build.VERSION.SDK_INT
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -20,6 +25,10 @@ import com.genius.cgps.CGGPS
 import com.genius.cgps.ResolutionNeedException
 import com.genius.cgps.toAddress
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
@@ -27,12 +36,8 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.system.measureTimeMillis
+
 
 class MainFragment : Fragment(R.layout.fragment_main) {
 
@@ -57,8 +62,12 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
     }
     private val updatesCaller = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-        if (result[Manifest.permission.ACCESS_FINE_LOCATION] == true && result[Manifest.permission.WRITE_EXTERNAL_STORAGE] == true) {
-            startUpdates()
+        if (result[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+            if (result[Manifest.permission.WRITE_EXTERNAL_STORAGE] == null && SDK_INT >= Build.VERSION_CODES.R) {
+                storageCaller.launch(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+            } else if (result[Manifest.permission.WRITE_EXTERNAL_STORAGE] == true) {
+                startUpdates()
+            }
         } else if (result[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
             tvHello?.text = getString(R.string.location_type_not_supported)
         }
@@ -68,6 +77,12 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             serviceAction()
         } else if (result[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
             tvHello?.text = getString(R.string.location_type_not_supported)
+        }
+    }
+    @RequiresApi(Build.VERSION_CODES.R)
+    private val storageCaller = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        if (Environment.isExternalStorageManager()) {
+            startUpdates()
         }
     }
 
@@ -133,14 +148,21 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
     private fun startUpdates() {
         val finePermission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
-        val writePermission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE)
-        if (finePermission != PackageManager.PERMISSION_GRANTED || writePermission != PackageManager.PERMISSION_GRANTED) {
-            updatesCaller.launch(
+        val writePermission = checkStoragePermission()
+        if (finePermission != PackageManager.PERMISSION_GRANTED || !writePermission) {
+            val locationPermission = arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+            )
+            val storagePermission = if (SDK_INT >= Build.VERSION_CODES.R) {
+                arrayOf()
+            } else {
                 arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
                     Manifest.permission.WRITE_EXTERNAL_STORAGE
                 )
+            }
+            updatesCaller.launch(
+                locationPermission + storagePermission
             )
             return
         }
@@ -177,7 +199,8 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     }
 
     private fun logEvent(text: String) {
-        val logFile = File("sdcard/CGPS.txt")
+        val downloadFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        val logFile = File(downloadFolder, "CGPS.txt")
         if (!logFile.exists()) {
             try {
                 logFile.createNewFile()
@@ -207,6 +230,15 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
         val serviceIntent = Intent(requireContext(), LocationService::class.java)
         requireContext().startService(serviceIntent)
+    }
+
+    private fun checkStoragePermission(): Boolean {
+        return if (SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else {
+            val result = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            result == PackageManager.PERMISSION_GRANTED
+        }
     }
 }
 

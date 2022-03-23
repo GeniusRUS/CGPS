@@ -52,6 +52,8 @@ class CGGPS(private val context: Context) {
      * Getting last known location of user by GooglePlay services
      * It can be cache from other applications during getting location to them
      *
+     * Required permission [Manifest.permission.ACCESS_COARSE_LOCATION]
+     *
      * @return [Location] location of user
      * @throws LocationException on undefined errors. In this case, the reason is written in [LocationException.message]
      * @throws ServicesAvailabilityException in case there are no GooglePlay services on the device
@@ -87,6 +89,8 @@ class CGGPS(private val context: Context) {
      * For flexibility of the location request, you can specify [accuracy], [timeout]
      *
      * The steps of checking and possible exceptions are the same as the order of the error descriptions below.
+     *
+     * Required permission [Manifest.permission.ACCESS_FINE_LOCATION]
      *
      * @param accuracy The accuracy of the obtained coordinates. Default value is [LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY]
      * @param timeout timeout for getting coordinates. The default is 5000 milliseconds
@@ -139,6 +143,8 @@ class CGGPS(private val context: Context) {
      *
      * For flexibility of the location request, you can specify [accuracy], [timeout]
      *
+     * Required permission [Manifest.permission.ACCESS_FINE_LOCATION]
+     *
      * @param accuracy The accuracy of the obtained coordinates. Default value is [LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY]
      * @param timeout timeout for getting coordinates. The default is 5000 milliseconds
      * @return [Location] location of user
@@ -181,6 +187,8 @@ class CGGPS(private val context: Context) {
      * For flexibility of the location request, you can specify [accuracy], [timeout]
      *
      * At the end of the work on receiving coordinates, closes [SendChannel] and unsubscribes [LocationManager] from its listener
+     *
+     * Required permission [Manifest.permission.ACCESS_FINE_LOCATION]
      *
      * @param accuracy The accuracy of the obtained coordinates. Default value is [LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY]
      * @param timeout timeout for getting coordinates. The default is 5000 milliseconds
@@ -231,15 +239,15 @@ class CGGPS(private val context: Context) {
 
     private class CGPSCallback(private val coroutine: CompletableDeferred<Location>?,
                                private val listener: Channel<Result<Location>>?) : LocationCallback() {
-        override fun onLocationResult(locationResult: LocationResult?) {
-            locationResult?.locations?.getOrNull(0)?.let {
+        override fun onLocationResult(locationResult: LocationResult) {
+            locationResult.locations.firstOrNull()?.let {
                 coroutine?.complete(it)
                 listener?.trySend(Result.success(it))
             } ?: handleError()
         }
 
-        override fun onLocationAvailability(locationStatus: LocationAvailability?) {
-            if (locationStatus?.isLocationAvailable == false) {
+        override fun onLocationAvailability(locationStatus: LocationAvailability) {
+            if (!locationStatus.isLocationAvailable) {
                 coroutine?.completeExceptionally(LocationException("Location are unavailable with those settings"))
                 listener?.trySend(Result.failure(LocationException("Location are unavailable with those settings")))
             }

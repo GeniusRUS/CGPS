@@ -11,7 +11,6 @@ import androidx.core.app.NotificationCompat
 import android.content.Context
 import android.os.Build
 import com.genius.cgps.CGGPS
-import kotlinx.coroutines.flow.collect
 
 class LocationService : Service(), CoroutineScope {
 
@@ -56,7 +55,12 @@ class LocationService : Service(), CoroutineScope {
         val cancelIntent = Intent(this, LocationService::class.java).apply {
             putExtra(NOTIFICATION_ACTION, true)
         }
-        val pendingIntent = PendingIntent.getService(this, 0, cancelIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+        val pendingIntent = PendingIntent.getService(this, 0, cancelIntent, flags)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager?

@@ -40,6 +40,8 @@ class CGPS(private val context: Context) {
     /**
      * Retrieves the last known location of the user from the device's GPS adapter
      *
+     * Required permission [Manifest.permission.ACCESS_COARSE_LOCATION]
+     *
      * @return [Location] user location
      * @throws LocationException in case of undefined errors. In this case, the reason is written in [LocationException.message]
      * @throws LocationDisabledException in case of disabled GPS adapter
@@ -74,6 +76,8 @@ class CGPS(private val context: Context) {
      * For flexibility in requesting a location, you can specify [accuracy], [timeout]
      *
      * The stages of checking and possible throwing of errors coincide with the order of the error descriptions below.
+     *
+     * Required permission [Manifest.permission.ACCESS_FINE_LOCATION]
      *
      * @param accuracy the accuracy of the obtained coordinates. The default is [Accuracy.COARSE]
      * @param timeout timeout for getting coordinates. Default 5000 milliseconds
@@ -138,6 +142,8 @@ class CGPS(private val context: Context) {
      * Since a [Job] instance is returned, there is a mechanism that can control the life cycle of this request
      *
      * At the end of the work on receiving coordinates, it closes [SendChannel] and unsubscribes [LocationManager] from its listener
+     *
+     * Required permission [Manifest.permission.ACCESS_FINE_LOCATION]
      *
      * @param accuracy the accuracy of the obtained coordinates. The default is [Accuracy.COARSE]
      * @param timeout timeout for getting coordinates. The default is 10_000 milliseconds
