@@ -6,18 +6,18 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Address
 import android.location.Location
+import android.net.Uri
 import android.os.Build
 import android.os.Build.VERSION.SDK_INT
 import android.os.Bundle
 import android.os.Environment
-import android.provider.Settings
+import android.provider.DocumentsContract
 import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -30,14 +30,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedWriter
-import java.io.File
-import java.io.FileWriter
 import java.io.IOException
+import java.io.OutputStreamWriter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.system.measureTimeMillis
-
 
 class MainFragment : Fragment(R.layout.fragment_main) {
 
@@ -63,11 +61,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     }
     private val updatesCaller = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         if (result[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
-            if (result[Manifest.permission.WRITE_EXTERNAL_STORAGE] == null && SDK_INT >= Build.VERSION_CODES.R) {
-                storageCaller.launch(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
-            } else if (result[Manifest.permission.WRITE_EXTERNAL_STORAGE] == true) {
-                startUpdates()
-            }
+            createFileToSave()
         } else if (result[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
             tvHello?.text = getString(R.string.location_type_not_supported)
         }
@@ -79,12 +73,13 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             tvHello?.text = getString(R.string.location_type_not_supported)
         }
     }
-    @RequiresApi(Build.VERSION_CODES.R)
     private val storageCaller = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        if (Environment.isExternalStorageManager()) {
-            startUpdates()
+        it.data?.data?.let { uriFileToSave ->
+            startUpdates(uriFileToSave)
+            saveToFile = uriFileToSave
         }
     }
+    private var saveToFile: Uri? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -99,7 +94,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         btnLocationUpdates?.setOnClickListener {
             if (updates?.isActive != true) {
                 btnLocationUpdates?.setText(R.string.action_stop)
-                startUpdates()
+                startUpdates(saveToFile)
             } else {
                 updates?.cancel()
                 btnLocationUpdates?.setText(R.string.action_start)
@@ -146,24 +141,17 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
     }
 
-    private fun startUpdates() {
+    private fun startUpdates(uriFile: Uri? = null) {
         val finePermission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
-        val writePermission = checkStoragePermission()
-        if (finePermission != PackageManager.PERMISSION_GRANTED || !writePermission) {
+        if (finePermission != PackageManager.PERMISSION_GRANTED) {
             val locationPermission = arrayOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION,
             )
-            val storagePermission = if (SDK_INT >= Build.VERSION_CODES.R) {
-                arrayOf()
-            } else {
-                arrayOf(
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE
-                )
-            }
-            updatesCaller.launch(
-                locationPermission + storagePermission
-            )
+            updatesCaller.launch(locationPermission)
+            return
+        } else if (uriFile == null) {
+            createFileToSave()
             return
         }
 
@@ -180,7 +168,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             |Altitude: ${location.altitude}""".trimMargin()
 
                     tvHello?.text = message
-                    logEvent(message)
+                    logEvent(uriFile, message)
                     currentStep++
                 }
                 result.exceptionOrNull() ?.let { error ->
@@ -189,7 +177,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 |
                 |${error.message ?: "Empty message"}""".trimMargin()
                     tvHello?.text = message
-                    logEvent(message)
+                    logEvent(uriFile, message)
                     currentStep++
                 }
             }
@@ -198,20 +186,14 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         return
     }
 
-    private fun logEvent(text: String) {
-        val downloadFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-        val logFile = File(downloadFolder, "CGPS.txt")
-        if (!logFile.exists()) {
-            try {
-                logFile.createNewFile()
-            } catch (e: IOException) {
-                Log.e("File", e.message, e)
-            }
-        }
-
+    private fun logEvent(uriFile: Uri, text: String) {
         try {
             //BufferedWriter for performance, true to set append to file flag
-            BufferedWriter(FileWriter(logFile, true)).use {
+            BufferedWriter(
+                OutputStreamWriter(
+                    requireContext().contentResolver.openOutputStream(uriFile, "wa")
+                )
+            ).use {
                 it.append(text)
                 it.newLine()
                 it.append("---------------------------------------")
@@ -232,13 +214,18 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         requireContext().startService(serviceIntent)
     }
 
-    private fun checkStoragePermission(): Boolean {
-        return if (SDK_INT >= Build.VERSION_CODES.R) {
-            Environment.isExternalStorageManager()
-        } else {
-            val result = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE)
-            result == PackageManager.PERMISSION_GRANTED
+    private fun createFileToSave() {
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TITLE, "CGPS.txt")
+
+            if (SDK_INT >= Build.VERSION_CODES.O) {
+                putExtra(DocumentsContract.EXTRA_INITIAL_URI, Environment.DIRECTORY_DOWNLOADS)
+            }
         }
+
+        storageCaller.launch(intent)
     }
 }
 
