@@ -6,12 +6,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Address
 import android.location.Location
-import android.net.Uri
 import android.os.Build
-import android.os.Build.VERSION.SDK_INT
 import android.os.Bundle
 import android.os.Environment
-import android.provider.DocumentsContract
 import android.util.Log
 import android.view.View
 import android.widget.Button
@@ -30,8 +27,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedWriter
+import java.io.File
+import java.io.FileWriter
 import java.io.IOException
-import java.io.OutputStreamWriter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -60,8 +58,9 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
     }
     private val updatesCaller = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-        if (result[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
-            createFileToSave()
+        val isStorageGranted = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P || result[Manifest.permission.WRITE_EXTERNAL_STORAGE] == true
+        if (result[Manifest.permission.ACCESS_FINE_LOCATION] == true && isStorageGranted) {
+            startUpdates()
         } else if (result[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
             tvHello?.text = getString(R.string.location_type_not_supported)
         }
@@ -73,13 +72,6 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             tvHello?.text = getString(R.string.location_type_not_supported)
         }
     }
-    private val storageCaller = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        it.data?.data?.let { uriFileToSave ->
-            startUpdates(uriFileToSave)
-            saveToFile = uriFileToSave
-        }
-    }
-    private var saveToFile: Uri? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -94,7 +86,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         btnLocationUpdates?.setOnClickListener {
             if (updates?.isActive != true) {
                 btnLocationUpdates?.setText(R.string.action_stop)
-                startUpdates(saveToFile)
+                startUpdates()
             } else {
                 updates?.cancel()
                 btnLocationUpdates?.setText(R.string.action_start)
@@ -141,17 +133,20 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
     }
 
-    private fun startUpdates(uriFile: Uri? = null) {
-        val finePermission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
-        if (finePermission != PackageManager.PERMISSION_GRANTED) {
-            val locationPermission = arrayOf(
+    private fun startUpdates() {
+        val storagePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            false
+        } else {
+            ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        }
+        val finePermission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+        if (finePermission || storagePermission) {
+            val permissions = arrayOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
             )
-            updatesCaller.launch(locationPermission)
-            return
-        } else if (uriFile == null) {
-            createFileToSave()
+            updatesCaller.launch(permissions)
             return
         }
 
@@ -168,7 +163,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             |Altitude: ${location.altitude}""".trimMargin()
 
                     tvHello?.text = message
-                    logEvent(uriFile, message)
+                    logEvent(message)
                     currentStep++
                 }
                 result.exceptionOrNull() ?.let { error ->
@@ -177,7 +172,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 |
                 |${error.message ?: "Empty message"}""".trimMargin()
                     tvHello?.text = message
-                    logEvent(uriFile, message)
+                    logEvent(message)
                     currentStep++
                 }
             }
@@ -186,14 +181,11 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         return
     }
 
-    private fun logEvent(uriFile: Uri, text: String) {
+    private fun logEvent(text: String) {
         try {
             //BufferedWriter for performance, true to set append to file flag
-            BufferedWriter(
-                OutputStreamWriter(
-                    requireContext().contentResolver.openOutputStream(uriFile, "wa")
-                )
-            ).use {
+            val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            BufferedWriter(FileWriter(File(dir, "CGPS.txt"), true)).use {
                 it.append(text)
                 it.newLine()
                 it.append("---------------------------------------")
@@ -212,20 +204,6 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
         val serviceIntent = Intent(requireContext(), LocationService::class.java)
         requireContext().startService(serviceIntent)
-    }
-
-    private fun createFileToSave() {
-        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TITLE, "CGPS.txt")
-
-            if (SDK_INT >= Build.VERSION_CODES.O) {
-                putExtra(DocumentsContract.EXTRA_INITIAL_URI, Environment.DIRECTORY_DOWNLOADS)
-            }
-        }
-
-        storageCaller.launch(intent)
     }
 }
 
