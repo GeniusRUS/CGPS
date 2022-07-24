@@ -6,6 +6,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.location.*
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.annotation.IntRange
@@ -100,7 +101,7 @@ class CGPS(private val context: Context) {
         } else {
             val listener = coroutine.createLocationListener()
 
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 val provider = manager?.getBestProvider(accuracy.toCriteria(), true)
                 if (provider == null || manager == null) {
                     coroutine.completeExceptionally(LocationException("LocationManager not instantiated or provider instance is not defined"))
@@ -175,8 +176,11 @@ class CGPS(private val context: Context) {
                 complete(location)
             }
 
+            @Deprecated(message = "Deprecated for Android Q+", replaceWith = ReplaceWith(""))
             override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
-                completeExceptionally(LocationException("Status $provider changed: $status with extras $extras"))
+                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                    completeExceptionally(LocationException("Status $provider changed: $status with extras $extras"))
+                }
             }
 
             override fun onProviderEnabled(provider: String) {

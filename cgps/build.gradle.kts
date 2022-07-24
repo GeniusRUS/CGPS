@@ -11,8 +11,10 @@ tasks.dokkaJavadoc.configure {
     outputDirectory.set(buildDir.resolve("javadoc"))
 }
 
-mavenPublish {
-    androidVariantToPublish = "release"
+mavenPublishing {
+    signAllPublications()
+    pomFromGradleProperties()
+    publishToMavenCentral()
 }
 
 android {
@@ -24,11 +26,11 @@ android {
     }
 
     buildTypes {
-        getByName("debug") {
+        debug {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
-        getByName("release") {
+        release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
@@ -39,20 +41,20 @@ android {
     }
 }
 
-val verCoroutinesStuff = "1.6.0"
+val coroutineVer: String by project
 
 dependencies {
-    implementation("androidx.appcompat:appcompat:1.4.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$verCoroutinesStuff")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$verCoroutinesStuff")
+    implementation("androidx.appcompat:appcompat:1.4.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutineVer")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$coroutineVer")
     implementation(kotlin("stdlib-jdk7", KotlinCompilerVersion.VERSION))
-    implementation("androidx.activity:activity-ktx:1.4.0")
-    implementation("androidx.fragment:fragment-ktx:1.4.1")
+    implementation("androidx.activity:activity-ktx:1.5.0")
+    implementation("androidx.fragment:fragment-ktx:1.5.0")
 
-    implementation("com.google.android.gms:play-services-location:19.0.1")
+    implementation("com.google.android.gms:play-services-location:20.0.0")
 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.mockito:mockito-core:4.4.0")
+    testImplementation("org.mockito:mockito-core:4.6.1")
     testImplementation("androidx.test:core:1.4.0")
     androidTestImplementation("androidx.test.ext:junit:1.1.3")
     androidTestImplementation("androidx.test:runner:1.4.0")

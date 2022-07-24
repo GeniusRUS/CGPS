@@ -268,10 +268,10 @@ class CGGPS(private val context: Context) {
     @Retention(AnnotationRetention.SOURCE)
     annotation class Accuracy {
         companion object {
-            const val HIGH = LocationRequest.PRIORITY_HIGH_ACCURACY
-            const val BALANCED = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY
-            const val LOW = LocationRequest.PRIORITY_LOW_POWER
-            const val NO = LocationRequest.PRIORITY_NO_POWER
+            const val HIGH = Priority.PRIORITY_HIGH_ACCURACY
+            const val BALANCED = Priority.PRIORITY_BALANCED_POWER_ACCURACY
+            const val LOW = Priority.PRIORITY_LOW_POWER
+            const val NO = Priority.PRIORITY_PASSIVE
         }
     }
 }
