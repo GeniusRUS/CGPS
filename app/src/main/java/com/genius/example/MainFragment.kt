@@ -18,10 +18,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.genius.cgps.CGGPS
+import com.genius.cgps.CGPS
+import com.genius.cgps.GoogleCGPS
+import com.genius.cgps.HardwareCGPS
+import com.genius.cgps.HuaweiCGPS
 import com.genius.cgps.ResolutionNeedException
 import com.genius.cgps.toAddress
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -41,26 +43,33 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     private var currentStep = 0
     private val formatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
-    private var fab: FloatingActionButton? = null
+    private val hardwareCgps: CGPS by lazy { HardwareCGPS(requireContext()) }
+    private val googleCgps: CGPS by lazy { GoogleCGPS(requireContext()) }
+    private val huaweiCgps: CGPS by lazy { HuaweiCGPS(requireContext()) }
+    private var currentCgps: CGPS? = null
+
+    private var hardwareSingle: Button? = null
+    private var googleSingle: Button? = null
+    private var huaweiSingle: Button? = null
     private var btnService: Button? = null
     private var btnLocationUpdates: Button? = null
     private var tvHello: TextView? = null
     private val singleUpdateCaller = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         if (result[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
-            singleUpdate()
+            singleUpdate(currentCgps ?: return@registerForActivityResult)
         } else if (result[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
             tvHello?.text = getString(R.string.location_type_not_supported)
         }
     }
     private val resolveSingleCaller = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            singleUpdate()
+            singleUpdate(currentCgps ?: return@registerForActivityResult)
         }
     }
     private val updatesCaller = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         val isStorageGranted = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P || result[Manifest.permission.WRITE_EXTERNAL_STORAGE] == true
         if (result[Manifest.permission.ACCESS_FINE_LOCATION] == true && isStorageGranted) {
-            startUpdates()
+            startUpdates(googleCgps)
         } else if (result[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
             tvHello?.text = getString(R.string.location_type_not_supported)
         }
@@ -76,17 +85,21 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        fab = view.findViewById(R.id.fab)
+        hardwareSingle = view.findViewById(R.id.hardware_single)
+        googleSingle = view.findViewById(R.id.google_single)
+        huaweiSingle = view.findViewById(R.id.huawei_single)
         btnService = view.findViewById(R.id.b_service)
         btnLocationUpdates = view.findViewById(R.id.b_location_updates)
         tvHello = view.findViewById(R.id.tv_hello)
 
-        fab?.setOnClickListener { singleUpdate() }
+        hardwareSingle?.setOnClickListener { singleUpdate(hardwareCgps) }
+        googleSingle?.setOnClickListener { singleUpdate(googleCgps) }
+        huaweiSingle?.setOnClickListener { singleUpdate(huaweiCgps) }
         btnService?.setOnClickListener { serviceAction() }
         btnLocationUpdates?.setOnClickListener {
             if (updates?.isActive != true) {
                 btnLocationUpdates?.setText(R.string.action_stop)
-                startUpdates()
+                startUpdates(googleCgps)
             } else {
                 updates?.cancel()
                 btnLocationUpdates?.setText(R.string.action_start)
@@ -96,10 +109,11 @@ class MainFragment : Fragment(R.layout.fragment_main) {
     }
 
     @Suppress("BlockingMethodInNonBlockingContext")
-    private fun singleUpdate() {
+    private fun singleUpdate(cgps: CGPS) {
         lifecycleScope.launch {
             val permission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
             if (permission != PackageManager.PERMISSION_GRANTED) {
+                currentCgps = cgps
                 singleUpdateCaller.launch(
                     arrayOf(
                         Manifest.permission.ACCESS_FINE_LOCATION,
@@ -112,7 +126,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             val message = try {
                 buildString {
                     val requestTime = measureTimeMillis {
-                        val location: Location = CGGPS(requireContext()).actualLocationWithEnable()
+                        val location: Location = cgps.actualLocationWithEnable()
                         val address = withContext(Dispatchers.IO) {
                             location.toAddress(requireContext())
                         }
@@ -122,6 +136,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
                 }
 
             } catch (exceptionWithIntentSender: ResolutionNeedException) {
+                currentCgps = cgps
                 resolveSingleCaller.launch(IntentSenderRequest.Builder(exceptionWithIntentSender.intentSender).build())
                 "Please enable GPS adapter"
             } catch (e: Exception) {
@@ -133,7 +148,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
     }
 
-    private fun startUpdates() {
+    private fun startUpdates(cgps: CGPS) {
         val storagePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             false
         } else {
@@ -141,6 +156,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
         val finePermission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
         if (finePermission || storagePermission) {
+            currentCgps = cgps
             val permissions = arrayOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -152,7 +168,7 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
         currentStep = 1
         updates = lifecycleScope.launch {
-            CGGPS(requireContext()).requestUpdates().collect { result ->
+            cgps.requestUpdates().collect { result ->
                 result.getOrNull()?.let { location ->
                     val message = """Step $currentStep in ${formatter.format(Date(location.time))}
             |

@@ -5,6 +5,10 @@
     <string name="info_stopped">Stopped</string>
     <string name="service_action">Service</string>
 
+    <string name="hardware_single">Hardware</string>
+    <string name="google_single">Google</string>
+    <string name="huawei_single">Huawei</string>
+
     <string name="location_service_working">Location service is working</string>
     <string name="location_service_description_text">Channel for location service</string>
     <string name="stop_service_text">Stop service</string>

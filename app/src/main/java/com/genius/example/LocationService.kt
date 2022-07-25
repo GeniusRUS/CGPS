@@ -10,7 +10,8 @@ import kotlin.coroutines.CoroutineContext
 import androidx.core.app.NotificationCompat
 import android.content.Context
 import android.os.Build
-import com.genius.cgps.CGGPS
+import com.genius.cgps.CGPS
+import com.genius.cgps.GoogleCGPS
 
 class LocationService : Service(), CoroutineScope {
 
@@ -18,7 +19,7 @@ class LocationService : Service(), CoroutineScope {
         get() = Dispatchers.Main + supervisorJob
 
     private val supervisorJob: Job by lazy { SupervisorJob() }
-    private val updater: CGGPS by lazy { CGGPS(this) }
+    private val updater: CGPS by lazy { GoogleCGPS(this) }
     private var updaterJob: Job? = null
 
     private val binder = LocalBinder()

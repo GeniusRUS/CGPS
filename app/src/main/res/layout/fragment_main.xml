@@ -28,7 +28,7 @@
             android:id="@+id/tv_hello"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Press FAB below"
+            android:text="Select variant to obtain location below"
             android:gravity="center"
             android:textColor="?android:attr/textColorPrimary"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -42,7 +42,7 @@
             android:layout_height="wrap_content"
             android:text="@string/service_action"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintLeft_toRightOf="@+id/b_location_updates"
             app:layout_constraintRight_toRightOf="parent"/>
 
         <Button
@@ -54,14 +54,31 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/b_service"/>
 
+        <Button
+            android:id="@+id/hardware_single"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/hardware_single"
+            android:layout_marginStart="16dp"
+            app:layout_constraintBottom_toTopOf="@+id/b_location_updates"
+            app:layout_constraintLeft_toLeftOf="parent" />
+
+        <Button
+            android:id="@+id/google_single"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/google_single"
+            app:layout_constraintBottom_toTopOf="@+id/b_location_updates"
+            app:layout_constraintLeft_toRightOf="@+id/hardware_single"
+            app:layout_constraintRight_toLeftOf="@+id/huawei_single"/>
+
+        <Button
+            android:id="@+id/huawei_single"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/huawei_single"
+            android:layout_marginEnd="16dp"
+            app:layout_constraintBottom_toTopOf="@+id/b_location_updates"
+            app:layout_constraintRight_toRightOf="parent"/>
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="@dimen/fab_margin"
-        app:srcCompat="@android:drawable/ic_menu_mylocation" />
-
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
