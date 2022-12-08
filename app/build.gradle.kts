@@ -6,11 +6,12 @@ plugins {
 }
 
 android {
-    compileSdk = 32
+    namespace = "com.genius.example"
+    compileSdk = 33
     defaultConfig {
         applicationId = "com.genius.cgps"
         minSdk = 19
-        targetSdk = 32
+        targetSdk = 33
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -31,12 +32,12 @@ dependencies {
     implementation(project(":cgps-google"))
     implementation(project(":cgps-huawei"))
     implementation(kotlin("stdlib-jdk7", KotlinCompilerVersion.VERSION))
-    implementation("androidx.appcompat:appcompat:1.4.2")
+    implementation("androidx.appcompat:appcompat:1.5.1")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutineVer")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.5.0")
-    implementation("com.google.android.material:material:1.6.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.5.1")
+    implementation("com.google.android.material:material:1.7.0")
     testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test:runner:1.4.0")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.4.0")
+    androidTestImplementation("androidx.test:runner:1.5.1")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.0")
 }
