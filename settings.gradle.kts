@@ -10,7 +10,7 @@ pluginManagement {
         eachPlugin {
             if (requested.id.namespace == "com.huawei.agconnect") {
                 if (requested.id.id == "com.huawei.agconnect.agcp") {
-                    useModule("com.huawei.agconnect:agcp:1.7.3.300")
+                    useModule("com.huawei.agconnect:agcp:1.8.0.300")
                 }
             }
         }

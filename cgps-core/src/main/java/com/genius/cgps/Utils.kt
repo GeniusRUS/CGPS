@@ -46,10 +46,11 @@ fun Context.checkPermission(isCoarse: Boolean) = if (isCoarse) {
  * @throws IllegalArgumentException if [Location.getLatitude] is not in range [-90..90]
  * @throws IllegalArgumentException if [Location.getLongitude] is not in range [-180..180]
  */
+@Suppress("DEPRECATION")
 @WorkerThread
 @Throws(IOException::class)
 fun Location.toAddress(context: Context, locale: Locale = Locale.getDefault()): Address? =
-    Geocoder(context, locale).getFromLocation(this.latitude, this.longitude, 1).firstOrNull()
+    Geocoder(context, locale).getFromLocation(this.latitude, this.longitude, 1)?.firstOrNull()
 
 /**
  * Calls the system geolocation settings activity
