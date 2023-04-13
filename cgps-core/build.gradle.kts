@@ -3,7 +3,6 @@ import org.jetbrains.kotlin.config.KotlinCompilerVersion
 plugins {
     id("com.android.library")
     kotlin("android")
-    id("org.jetbrains.dokka")
     id("com.vanniktech.maven.publish")
 }
 
@@ -21,9 +20,7 @@ android {
     compileSdk = 33
     defaultConfig {
         minSdk = 16
-        targetSdk = 33
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
@@ -36,7 +33,13 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
-
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_11.toString()
+    }
     buildFeatures {
         buildConfig = false
     }
@@ -48,11 +51,11 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutineVer")
     implementation(kotlin("stdlib-jdk7", KotlinCompilerVersion.VERSION))
-    implementation("androidx.activity:activity-ktx:1.6.1")
-    implementation("androidx.fragment:fragment-ktx:1.5.5")
+    implementation("androidx.activity:activity-ktx:1.7.0")
+    implementation("androidx.fragment:fragment-ktx:1.5.6")
 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.mockito:mockito-core:5.1.1")
+    testImplementation("org.mockito:mockito-core:5.2.0")
     testImplementation("androidx.test:core:1.5.0")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test:runner:1.5.2")

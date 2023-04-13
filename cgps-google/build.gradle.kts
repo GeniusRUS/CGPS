@@ -1,8 +1,7 @@
 plugins {
     id("com.android.library")
-    id("org.jetbrains.dokka")
-    id("org.jetbrains.kotlin.android")
     id("com.vanniktech.maven.publish")
+    kotlin("android")
 }
 
 tasks.dokkaJavadoc.configure {
@@ -19,9 +18,7 @@ android {
     compileSdk = 33
     defaultConfig {
         minSdk = 16
-        targetSdk = 33
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
     }
 
     buildTypes {
@@ -53,7 +50,7 @@ val coroutineVer: String by project
 
 dependencies {
     api(project(":cgps-core"))
-    implementation("androidx.core:core-ktx:1.9.0")
+    implementation("androidx.core:core-ktx:1.10.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.8.0")
     testImplementation("junit:junit:4.13.2")
