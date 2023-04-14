@@ -108,7 +108,6 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
     }
 
-    @Suppress("BlockingMethodInNonBlockingContext")
     private fun singleUpdate(cgps: CGPS) {
         lifecycleScope.launch {
             val permission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)

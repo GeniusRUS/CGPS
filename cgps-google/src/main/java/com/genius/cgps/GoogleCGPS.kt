@@ -156,7 +156,6 @@ class GoogleCGPS(private val context: Context) : CGPS {
             val cancellationTokenSource = CancellationTokenSource()
             val locationTask =
                 fusedLocation.getCurrentLocation(accuracy, cancellationTokenSource.token)
-
             try {
                 withTimeout(timeout) {
                     val location = locationTask.await()
@@ -207,7 +206,6 @@ class GoogleCGPS(private val context: Context) : CGPS {
         val settingsRequest = LocationSettingsRequest.Builder()
             .addLocationRequest(createRequest(accuracy, timeout, timeout, 1))
             .build()
-
         try {
             settings.checkLocationSettings(settingsRequest).await()
         } catch (e: Exception) {
@@ -279,12 +277,11 @@ class GoogleCGPS(private val context: Context) : CGPS {
         timeout: Long,
         updates: Int? = null
     ): LocationRequest {
-        return LocationRequest.create().apply {
-            updates?.let { count -> this.numUpdates = count }
-            this.interval = interval
-            this.maxWaitTime = timeout
-            this.priority = accuracy
-        }
+        return LocationRequest.Builder(interval).apply {
+            updates?.let { count -> this.setMaxUpdates(count) }
+            this.setMaxUpdateDelayMillis(timeout)
+            this.setPriority(accuracy)
+        }.build()
     }
 
     private class CGPSCallback(
