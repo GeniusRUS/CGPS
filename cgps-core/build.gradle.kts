@@ -7,7 +7,7 @@ plugins {
 }
 
 tasks.dokkaJavadoc.configure {
-    outputDirectory.set(buildDir.resolve("javadoc"))
+    outputDirectory.set(layout.buildDirectory.dir("javadoc"))
 }
 
 mavenPublishing {
@@ -17,7 +17,7 @@ mavenPublishing {
 
 android {
     namespace = "com.genius.coroutinesgps"
-    compileSdk = 33
+    compileSdk = 34
     defaultConfig {
         minSdk = 16
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -43,22 +43,21 @@ android {
     buildFeatures {
         buildConfig = false
     }
+    packaging {
+        resources.excludes += "DebugProbesKt.bin"
+    }
 }
 
 val coroutineVer: String by project
+val coreVer: String by project
 
 dependencies {
-    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("androidx.core:core:$coreVer")
+    implementation("androidx.annotation:annotation:1.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutineVer")
     implementation(kotlin("stdlib", KotlinCompilerVersion.VERSION))
-    implementation("androidx.activity:activity-ktx:1.7.2")
-    implementation("androidx.fragment:fragment-ktx:1.6.0")
 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.mockito:mockito-core:5.4.0")
+    testImplementation("org.mockito:mockito-core:5.8.0")
     testImplementation("androidx.test:core:1.5.0")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test:runner:1.5.2")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation("androidx.test:rules:1.5.0")
 }

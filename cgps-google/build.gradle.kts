@@ -5,7 +5,7 @@ plugins {
 }
 
 tasks.dokkaJavadoc.configure {
-    outputDirectory.set(buildDir.resolve("javadoc"))
+    outputDirectory.set(layout.buildDirectory.dir("javadoc"))
 }
 
 mavenPublishing {
@@ -15,7 +15,7 @@ mavenPublishing {
 
 android {
     namespace = "com.genius.cgps.google"
-    compileSdk = 33
+    compileSdk = 34
     defaultConfig {
         minSdk = 16
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -38,16 +38,18 @@ android {
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
+    packaging {
+        resources.excludes += "DebugProbesKt.bin"
+    }
 }
 
 val coroutineVer: String by project
+val coreVer: String by project
 
 dependencies {
     api(project(":cgps-core"))
-    implementation("androidx.core:core-ktx:1.10.1")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("com.google.android.material:material:1.9.0")
-    testImplementation("junit:junit:4.13.2")
+    implementation("androidx.core:core-ktx:$coreVer")
+
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation("androidx.test:rules:1.5.0")
