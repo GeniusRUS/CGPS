@@ -1,7 +1,7 @@
 plugins {
-    id("com.android.library")
-    id("com.vanniktech.maven.publish")
-    kotlin("android")
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.maven.publish)
+    alias(libs.plugins.kotlin.android)
 }
 
 tasks.dokkaJavadoc.configure {
@@ -43,17 +43,14 @@ android {
     }
 }
 
-val coroutineVer: String by project
-val coreVer: String by project
-
 dependencies {
     api(project(":cgps-core"))
-    implementation("androidx.core:core-ktx:$coreVer")
+    implementation(libs.core.ktx)
 
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation("androidx.test:rules:1.5.0")
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.espresso.core)
+    androidTestImplementation(libs.rules)
 
-    implementation("com.google.android.gms:play-services-location:21.0.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$coroutineVer")
+    implementation(libs.google.location)
+    implementation(libs.kotlinx.coroutines.play.services)
 }

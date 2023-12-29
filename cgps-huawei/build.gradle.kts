@@ -1,8 +1,8 @@
 plugins {
-    id("com.android.library")
+    alias(libs.plugins.android.library)
     id("com.huawei.agconnect")
-    id("com.vanniktech.maven.publish")
-    kotlin("android")
+    alias(libs.plugins.maven.publish)
+    alias(libs.plugins.kotlin.android)
 }
 
 tasks.dokkaJavadoc.configure {
@@ -44,17 +44,13 @@ android {
     }
 }
 
-val coroutineVer: String by project
-val coreVer: String by project
-
 dependencies {
     api(project(":cgps-core"))
-    implementation("androidx.core:core-ktx:$coreVer")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation("androidx.test:rules:1.5.0")
+    implementation(libs.core.ktx)
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.espresso.core)
+    androidTestImplementation(libs.rules)
 
-    // https://developer.huawei.com/consumer/de/doc/development/HMSCore-Guides/version-change-history-0000001050986155
-    implementation("com.huawei.hms:location:6.12.0.300")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutineVer")
+    implementation(libs.huawei.location)
+    implementation(libs.kotlinx.coroutines.android)
 }

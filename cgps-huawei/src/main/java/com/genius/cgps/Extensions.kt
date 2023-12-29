@@ -21,7 +21,6 @@ private suspend fun <T> Task<T>.awaitImpl(cancellationTokenSource: CancellationT
             if (isCanceled) {
                 throw CancellationException("Task $this was cancelled normally.")
             } else {
-                @Suppress("UNCHECKED_CAST")
                 result as T
             }
         } else {
@@ -34,7 +33,6 @@ private suspend fun <T> Task<T>.awaitImpl(cancellationTokenSource: CancellationT
         addOnCompleteListener(DirectExecutor) {
             val e = it.exception
             if (e == null) {
-                @Suppress("UNCHECKED_CAST")
                 if (it.isCanceled) cont.cancel() else cont.resume(it.result as T)
             } else {
                 cont.resumeWithException(e)

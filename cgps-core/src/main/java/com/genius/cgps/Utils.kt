@@ -8,11 +8,16 @@ import android.location.Address
 import android.location.Geocoder
 import android.location.Location
 import android.location.LocationManager
+import android.os.Build
 import android.provider.Settings
-import androidx.annotation.WorkerThread
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.util.Locale
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 fun isLocationEnabled(manager: LocationManager?) = manager?.isProviderEnabled(
     LocationManager.NETWORK_PROVIDER) ?: false
@@ -46,11 +51,33 @@ fun Context.checkPermission(isCoarse: Boolean) = if (isCoarse) {
  * @throws IllegalArgumentException if [Location.getLatitude] is not in range [-90..90]
  * @throws IllegalArgumentException if [Location.getLongitude] is not in range [-180..180]
  */
-@Suppress("DEPRECATION")
-@WorkerThread
 @Throws(IOException::class)
-fun Location.toAddress(context: Context, locale: Locale = Locale.getDefault()): Address? =
-    Geocoder(context, locale).getFromLocation(this.latitude, this.longitude, 1)?.firstOrNull()
+suspend fun Location.toAddress(context: Context, locale: Locale = Locale.getDefault()): Address? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    suspendCoroutine { continuation ->
+        Geocoder(context, locale).getFromLocation(
+            this.latitude,
+            this.longitude,
+            1,
+            object : Geocoder.GeocodeListener {
+                override fun onGeocode(addresses: MutableList<Address>) {
+                    continuation.resume(addresses.firstOrNull())
+                }
+
+                override fun onError(errorMessage: String?) {
+                    continuation.resumeWithException(
+                        LocationException(
+                            LocationException.ErrorType.OTHER,
+                            errorMessage ?: "n/a"
+                        )
+                    )
+                }
+            })
+    }
+} else withContext(Dispatchers.IO) {
+    @Suppress("DEPRECATION")
+    val address = Geocoder(context, locale).getFromLocation(this@toAddress.latitude, this@toAddress.longitude, 1)?.firstOrNull()
+    return@withContext address
+}
 
 /**
  * Calls the system geolocation settings activity

@@ -24,10 +24,8 @@ import com.genius.cgps.HardwareCGPS
 import com.genius.cgps.HuaweiCGPS
 import com.genius.cgps.ResolutionNeedException
 import com.genius.cgps.toAddress
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
@@ -75,7 +73,17 @@ class MainFragment : Fragment(R.layout.fragment_main) {
         }
     }
     private val serviceCaller = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-        if (result[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+        val foregroundService = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            result[Manifest.permission.FOREGROUND_SERVICE_LOCATION]
+        } else {
+            true
+        }
+        val postNotifications = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            result[Manifest.permission.POST_NOTIFICATIONS]
+        } else {
+            true
+        }
+        if (result[Manifest.permission.ACCESS_FINE_LOCATION] == true && foregroundService == true && postNotifications == true) {
             serviceAction()
         } else if (result[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
             tvHello?.text = getString(R.string.location_type_not_supported)
@@ -125,10 +133,11 @@ class MainFragment : Fragment(R.layout.fragment_main) {
             val message = try {
                 buildString {
                     val requestTime = measureTimeMillis {
-                        val location: Location = cgps.actualLocationWithEnable()
-                        val address = withContext(Dispatchers.IO) {
-                            location.toAddress(requireContext())
+                        val location: Location = when (cgps) {
+                            is HardwareCGPS -> cgps.actualLocation()
+                            else -> cgps.actualLocationWithEnable()
                         }
+                        val address = location.toAddress(requireContext())
                         this.appendLine(location.printInfo(address))
                     }
                     this.append("Done in $requestTime milliseconds")
@@ -213,8 +222,26 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
     private fun serviceAction() {
         val permission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
-        if (permission != PackageManager.PERMISSION_GRANTED) {
-            serviceCaller.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
+        val permissionForegroundLocation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.FOREGROUND_SERVICE_LOCATION)
+        } else {
+            PackageManager.PERMISSION_GRANTED
+        }
+        val notificationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            PackageManager.PERMISSION_GRANTED
+        }
+        if (permission != PackageManager.PERMISSION_GRANTED
+            || permissionForegroundLocation != PackageManager.PERMISSION_GRANTED
+            || notificationPermission != PackageManager.PERMISSION_GRANTED) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                serviceCaller.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.POST_NOTIFICATIONS, Manifest.permission.FOREGROUND_SERVICE_LOCATION))
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                serviceCaller.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.POST_NOTIFICATIONS))
+            } else {
+                serviceCaller.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
+            }
             return
         }
         val serviceIntent = Intent(requireContext(), LocationService::class.java)

@@ -10,6 +10,7 @@ import kotlin.coroutines.CoroutineContext
 import androidx.core.app.NotificationCompat
 import android.content.Context
 import android.os.Build
+import androidx.core.content.ContextCompat
 import com.genius.cgps.CGPS
 import com.genius.cgps.GoogleCGPS
 
@@ -41,7 +42,24 @@ class LocationService : Service(), CoroutineScope {
 
         updaterJob = launch {
             updater.requestUpdates().collect {
-                Log.d(TAG, it.getOrNull()?.toString() ?: "null")
+                ContextCompat.getSystemService(this@LocationService, NotificationManager::class.java)?.let { manager ->
+                    val cancelIntent: PendingIntent = createCancelIntentAndChannel()
+                    val location = it.getOrNull()?.let {
+                        buildString {
+                            append(it.provider)
+                            append(":")
+                            append(it.latitude)
+                            append(",")
+                            append(it.longitude)
+                            append(";a:")
+                            append(it.accuracy)
+                            append(";s:")
+                            append(it.speed)
+                        }
+                    }
+                    val notification: Notification = createCancelNotification(cancelIntent, location ?: getString(R.string.location_service_working))
+                    manager.notify(1, notification)
+                } ?: Log.d(TAG, it.getOrNull()?.toString() ?: "null")
             }
         }
 
@@ -66,20 +84,21 @@ class LocationService : Service(), CoroutineScope {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager?
             manager?.createNotificationChannel(
-                NotificationChannel(NOTIFICATION_CHANNEL_ID, getString(R.string.location_service_description_text), NotificationManager.IMPORTANCE_HIGH)
+                NotificationChannel(NOTIFICATION_CHANNEL_ID, getString(R.string.location_service_description_text), NotificationManager.IMPORTANCE_DEFAULT)
             )
         }
 
         return pendingIntent
     }
 
-    private fun createCancelNotification(cancelIntent: PendingIntent): Notification {
+    private fun createCancelNotification(cancelIntent: PendingIntent, contentText: String = getString(R.string.location_service_working)): Notification {
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
-            .setContentText(getString(R.string.location_service_working))
+            .setContentText(contentText)
             .setSmallIcon(R.drawable.ic_my_location_white_24dp)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
+            .setSilent(true)
             .addAction(
                 NotificationCompat.Action.Builder(
                     R.drawable.ic_cancel_white_24dp,

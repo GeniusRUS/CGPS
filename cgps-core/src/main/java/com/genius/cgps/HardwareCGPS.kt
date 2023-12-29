@@ -8,6 +8,7 @@ import android.location.*
 import android.os.Build
 import android.os.Bundle
 import androidx.annotation.IntRange
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.flow
@@ -32,7 +33,7 @@ import kotlin.coroutines.suspendCoroutine
  */
 class HardwareCGPS(private val context: Context) : CGPS {
 
-    private val manager: LocationManager? by lazy { context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager }
+    private val manager: LocationManager? by lazy { ContextCompat.getSystemService(context, LocationManager::class.java) }
 
     /**
      * Retrieves the last known location of the user from the device's GPS adapter

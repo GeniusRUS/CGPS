@@ -10,6 +10,7 @@ import android.location.LocationManager
 import android.os.Looper
 import androidx.annotation.IntDef
 import androidx.annotation.IntRange
+import androidx.core.content.ContextCompat
 import com.huawei.hms.api.ConnectionResult
 import com.huawei.hms.api.HuaweiApiAvailability
 import com.huawei.hms.common.ApiException
@@ -55,7 +56,7 @@ class HuaweiCGPS(private val context: Context) : CGPS {
         )
     }
     private val settings: SettingsClient by lazy { LocationServices.getSettingsClient(context) }
-    private val location: LocationManager? by lazy { context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager }
+    private val location: LocationManager? by lazy { ContextCompat.getSystemService(context, LocationManager::class.java) }
 
     /**
      * Getting last known location of user by GooglePlay services

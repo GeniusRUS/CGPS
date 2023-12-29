@@ -1,9 +1,9 @@
 import org.jetbrains.kotlin.config.KotlinCompilerVersion
 
 plugins {
-    id("com.android.library")
-    kotlin("android")
-    id("com.vanniktech.maven.publish")
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.maven.publish)
 }
 
 tasks.dokkaJavadoc.configure {
@@ -48,16 +48,13 @@ android {
     }
 }
 
-val coroutineVer: String by project
-val coreVer: String by project
-
 dependencies {
-    implementation("androidx.core:core:$coreVer")
-    implementation("androidx.annotation:annotation:1.7.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutineVer")
-    implementation(kotlin("stdlib", KotlinCompilerVersion.VERSION))
+    implementation(libs.core)
+    implementation(libs.annotation)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlin)
 
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.mockito:mockito-core:5.8.0")
-    testImplementation("androidx.test:core:1.5.0")
+    testImplementation(libs.junit.junit)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.test.core)
 }
