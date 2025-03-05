@@ -4,8 +4,10 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
-tasks.dokkaJavadoc.configure {
-    outputDirectory.set(layout.buildDirectory.dir("javadoc"))
+dokka {
+    dokkaPublications.html {
+        outputDirectory.set(layout.buildDirectory.dir("dokkaDir"))
+    }
 }
 
 mavenPublishing {
@@ -15,7 +17,7 @@ mavenPublishing {
 
 android {
     namespace = "com.genius.cgps.google"
-    compileSdk = 34
+    compileSdk = 35
     defaultConfig {
         minSdk = 16
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -46,6 +48,7 @@ android {
 dependencies {
     api(project(":cgps-core"))
     implementation(libs.core.ktx)
+    dokkaPlugin(libs.android.documentation.plugin)
 
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.espresso.core)

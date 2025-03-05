@@ -5,8 +5,10 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
-tasks.dokkaJavadoc.configure {
-    outputDirectory.set(layout.buildDirectory.dir("javadoc"))
+dokka {
+    dokkaPublications.html {
+        outputDirectory.set(layout.buildDirectory.dir("dokkaDir"))
+    }
 }
 
 mavenPublishing {
@@ -16,7 +18,7 @@ mavenPublishing {
 
 android {
     namespace = "com.genius.cgps.huawei"
-    compileSdk = 34
+    compileSdk = 35
     defaultConfig {
         minSdk = 19
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -53,4 +55,5 @@ dependencies {
 
     implementation(libs.huawei.location)
     implementation(libs.kotlinx.coroutines.android)
+    dokkaPlugin(libs.android.documentation.plugin)
 }

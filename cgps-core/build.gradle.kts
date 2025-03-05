@@ -1,13 +1,13 @@
-import org.jetbrains.kotlin.config.KotlinCompilerVersion
-
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.maven.publish)
 }
 
-tasks.dokkaJavadoc.configure {
-    outputDirectory.set(layout.buildDirectory.dir("javadoc"))
+dokka {
+    dokkaPublications.html {
+        outputDirectory.set(layout.buildDirectory.dir("dokkaDir"))
+    }
 }
 
 mavenPublishing {
@@ -17,7 +17,7 @@ mavenPublishing {
 
 android {
     namespace = "com.genius.coroutinesgps"
-    compileSdk = 34
+    compileSdk = 35
     defaultConfig {
         minSdk = 16
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.annotation)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlin)
+    dokkaPlugin(libs.android.documentation.plugin)
 
     testImplementation(libs.junit.junit)
     testImplementation(libs.mockito.core)
