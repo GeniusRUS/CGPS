@@ -6,7 +6,7 @@ plugins {
 
 dokka {
     dokkaPublications.html {
-        outputDirectory.set(layout.buildDirectory.dir("dokkaDir"))
+        outputDirectory.set(layout.buildDirectory.dir("javadoc"))
     }
 }
 
