@@ -10,7 +10,7 @@ dokka = "2.0.0"
 espressoCore = "3.6.1"
 junit = "1.2.1"
 junitVersion = "4.13.2"
-kotlin = "2.1.10"
+kotlin = "2.1.20"
 lifecycleRuntimeKtx = "2.8.7"
 huaweiLocation = "6.12.0.300"
 material = "1.12.0"
@@ -21,7 +21,7 @@ rules = "1.6.1"
 runner = "1.6.2"
 
 [libraries]
-android-documentation-plugin = { module = "org.jetbrains.dokka:android-documentation-plugin", version.ref = "androidDocumentationPlugin" }
+android-documentation-plugin = { module = "org.jetbrains.dokka:android-documentation-plugin", version.ref = "dokka" }
 annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
 appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }
