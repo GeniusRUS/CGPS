@@ -1,8 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
     id("com.huawei.agconnect")
-    alias(libs.plugins.maven.publish)
-    alias(libs.plugins.kotlin.android)
 }
 
 dokka {
@@ -11,39 +9,8 @@ dokka {
     }
 }
 
-mavenPublishing {
-    signAllPublications()
-    publishToMavenCentral()
-}
-
 android {
     namespace = "com.genius.cgps.huawei"
-    compileSdk = 35
-    defaultConfig {
-        minSdk = 19
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    buildTypes {
-        debug {
-            isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
-        }
-        release {
-            isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
-    }
-    packaging {
-        resources.excludes += "DebugProbesKt.bin"
-    }
 }
 
 dependencies {
