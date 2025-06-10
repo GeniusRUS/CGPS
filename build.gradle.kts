@@ -15,10 +15,6 @@ plugins {
     id("com.huawei.agconnect.agcp") version "1.9.1.304" apply false
 }
 
-task<Delete>("clean") {
-    delete(rootProject.layout.buildDirectory)
-}
-
 subprojects {
     apply {
         plugin(rootProject.libs.plugins.kotlin.android.get().pluginId)
