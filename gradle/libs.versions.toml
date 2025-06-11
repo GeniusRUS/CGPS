@@ -1,6 +1,7 @@
 [versions]
 jdk = "17"
 sdk-compile = "35"
+sdk-target = "35"
 sdk-min-common = "16"
 sdk-min-huawei = "19"
 androidGradlePlugin = "8.10.1"

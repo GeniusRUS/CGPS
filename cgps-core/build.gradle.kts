@@ -1,7 +1,3 @@
-plugins {
-    alias(libs.plugins.android.library)
-}
-
 dokka {
     dokkaPublications.html {
         outputDirectory.set(layout.buildDirectory.dir("javadoc"))

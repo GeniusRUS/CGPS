@@ -1,5 +1,7 @@
+import com.android.build.gradle.AppPlugin
 import com.android.build.gradle.LibraryExtension
 import com.android.build.gradle.LibraryPlugin
+import com.android.build.gradle.internal.dsl.BaseAppModuleExtension
 import com.vanniktech.maven.publish.MavenPublishBaseExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.KotlinAndroidPluginWrapper
@@ -16,26 +18,55 @@ plugins {
 }
 
 subprojects {
-    apply {
-        plugin(rootProject.libs.plugins.kotlin.android.get().pluginId)
-        plugin(rootProject.libs.plugins.kotlin.dokka.get().pluginId)
+    val isApp = project.name == "app"
+
+    if (isApp) {
+        pluginManager.apply(rootProject.libs.plugins.android.application.get().pluginId)
+    } else {
+        pluginManager.apply(rootProject.libs.plugins.android.library.get().pluginId)
     }
+
+    pluginManager.apply(rootProject.libs.plugins.kotlin.android.get().pluginId)
+    pluginManager.apply(rootProject.libs.plugins.kotlin.dokka.get().pluginId)
 
     if (project.name.contains("cgps-")) {
-        apply {
-            plugin(rootProject.libs.plugins.maven.publish.get().pluginId)
-        }
+        pluginManager.apply(rootProject.libs.plugins.maven.publish.get().pluginId)
     }
 
+    plugins.withType<AppPlugin> {
+        configure<BaseAppModuleExtension> {
+            namespace = "com.genius.example"
+            compileSdk = rootProject.libs.versions.sdk.compile.get().toInt()
+            defaultConfig {
+                applicationId = "com.genius.cgps"
+                minSdk = 21
+                targetSdk = rootProject.libs.versions.sdk.target.get().toInt()
+                versionCode = 1
+                versionName = "1.0"
+                testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+                multiDexEnabled = true
+            }
+            buildTypes {
+                release {
+                    isMinifyEnabled = false
+                    proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+                }
+            }
+            compileOptions {
+                sourceCompatibility = JavaVersion.toVersion(rootProject.libs.versions.jdk.get())
+                targetCompatibility = JavaVersion.toVersion(rootProject.libs.versions.jdk.get())
+            }
+        }
+    }
     plugins.withType<LibraryPlugin>().configureEach {
         configure<LibraryExtension> {
-            compileSdk = libs.versions.sdk.compile.get().toInt()
+            compileSdk = rootProject.libs.versions.sdk.compile.get().toInt()
 
             defaultConfig {
                 minSdk = if (project.name == "cgps-huawei") {
-                    libs.versions.sdk.min.huawei.get().toInt()
+                    rootProject.libs.versions.sdk.min.huawei.get().toInt()
                 } else {
-                    libs.versions.sdk.min.common.get().toInt()
+                    rootProject.libs.versions.sdk.min.common.get().toInt()
                 }
                 testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
             }
@@ -51,10 +82,12 @@ subprojects {
                     proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
                     packaging.resources.excludes += "DebugProbesKt.bin"
                 }
+
+                create("develop")
             }
             compileOptions {
-                sourceCompatibility = JavaVersion.toVersion(libs.versions.jdk.get())
-                targetCompatibility = JavaVersion.toVersion(libs.versions.jdk.get())
+                sourceCompatibility = JavaVersion.toVersion(rootProject.libs.versions.jdk.get())
+                targetCompatibility = JavaVersion.toVersion(rootProject.libs.versions.jdk.get())
             }
         }
     }
