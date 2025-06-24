@@ -3,7 +3,6 @@ import com.android.build.gradle.LibraryExtension
 import com.android.build.gradle.LibraryPlugin
 import com.android.build.gradle.internal.dsl.BaseAppModuleExtension
 import com.vanniktech.maven.publish.MavenPublishBaseExtension
-import com.vanniktech.maven.publish.SonatypeHost
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.KotlinAndroidPluginWrapper
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
@@ -102,7 +101,7 @@ subprojects {
     plugins.withType<MavenPublishPlugin> {
         configure<MavenPublishBaseExtension> {
             signAllPublications()
-            publishToMavenCentral(host = SonatypeHost.CENTRAL_PORTAL)
+            publishToMavenCentral()
         }
     }
 }
