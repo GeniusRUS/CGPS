@@ -1,7 +1,7 @@
+import com.android.build.api.dsl.ApplicationExtension
+import com.android.build.api.dsl.LibraryExtension
 import com.android.build.gradle.AppPlugin
-import com.android.build.gradle.LibraryExtension
 import com.android.build.gradle.LibraryPlugin
-import com.android.build.gradle.internal.dsl.BaseAppModuleExtension
 import com.vanniktech.maven.publish.MavenPublishBaseExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.KotlinAndroidPluginWrapper
@@ -10,7 +10,6 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.android.library) apply false
-    alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.dokka) apply false
     alias(libs.plugins.maven.publish) apply false
     // https://developer.huawei.com/consumer/en/doc/development/AppGallery-connect-Guides/agc-appmessage-sdkchangenotes-android-0000001072373122
@@ -26,7 +25,6 @@ subprojects {
         pluginManager.apply(rootProject.libs.plugins.android.library.get().pluginId)
     }
 
-    pluginManager.apply(rootProject.libs.plugins.kotlin.android.get().pluginId)
     pluginManager.apply(rootProject.libs.plugins.kotlin.dokka.get().pluginId)
 
     if (project.name.contains("cgps-")) {
@@ -34,12 +32,12 @@ subprojects {
     }
 
     plugins.withType<AppPlugin> {
-        configure<BaseAppModuleExtension> {
+        configure<ApplicationExtension> {
             namespace = "com.genius.example"
             compileSdk = rootProject.libs.versions.sdk.compile.get().toInt()
             defaultConfig {
                 applicationId = "com.genius.cgps"
-                minSdk = 21
+                minSdk = 23
                 targetSdk = rootProject.libs.versions.sdk.target.get().toInt()
                 versionCode = 1
                 versionName = "1.0"

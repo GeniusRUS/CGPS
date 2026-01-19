@@ -21,7 +21,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        jcenter() // Warning: this repository is going to shut down soon
+        // Warning: this repository is going to shut down soon
         maven { setUrl("https://developer.huawei.com/repo/") }
     }
 }

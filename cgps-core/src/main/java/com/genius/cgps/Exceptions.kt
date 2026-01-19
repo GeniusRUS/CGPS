@@ -9,7 +9,7 @@ import androidx.annotation.IntDef
  * @param type detailed type of exception
  * @param message reason for error in text representation
  */
-class LocationException(@ErrorType val type: Int, message: String) : Exception(message) {
+class LocationException(@param:ErrorType val type: Int, message: String) : Exception(message) {
 
     @IntDef(
         ErrorType.LOCATION_MANAGER,
@@ -24,7 +24,7 @@ class LocationException(@ErrorType val type: Int, message: String) : Exception(m
             const val LOCATION_MANAGER = 201
             const val FIDELITY = 202
             const val LAST_LOCATION = 203
-            const val CONNECT_VERIFICATION = 203
+            const val CONNECT_VERIFICATION = 204
             const val OTHER = 209
         }
     }

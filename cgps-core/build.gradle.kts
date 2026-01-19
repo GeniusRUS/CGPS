@@ -13,6 +13,8 @@ dependencies {
     implementation(libs.annotation)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlin)
+    implementation(libs.junit.ktx)
+    implementation(libs.rules)
     dokkaPlugin(libs.android.documentation.plugin)
 
     testImplementation(libs.junit.junit)
