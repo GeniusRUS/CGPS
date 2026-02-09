@@ -16,6 +16,9 @@ import android.widget.TextView
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.genius.cgps.CGPS
@@ -92,6 +95,14 @@ class MainFragment : Fragment(R.layout.fragment_main) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        ViewCompat.setOnApplyWindowInsetsListener(view.rootView) { view, insets ->
+            view.updatePadding(
+                top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top,
+                bottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom,
+            )
+            insets
+        }
 
         hardwareSingle = view.findViewById(R.id.hardware_single)
         googleSingle = view.findViewById(R.id.google_single)
