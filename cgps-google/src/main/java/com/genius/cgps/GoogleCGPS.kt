@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
 import java.util.concurrent.TimeoutException
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * A class that obtains user coordinates in various possible ways through internal GooglePlay services
@@ -158,7 +159,7 @@ class GoogleCGPS(private val context: Context) : CGPS {
             val locationTask =
                 fusedLocation.getCurrentLocation(accuracy, cancellationTokenSource.token)
             try {
-                withTimeout(timeout) {
+                withTimeout(timeout.milliseconds) {
                     val location = locationTask.await()
                     coroutine.complete(location)
                 }

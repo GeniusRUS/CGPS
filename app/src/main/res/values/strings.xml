@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name">CGPS</string>
+
+    <string name="action_main_hint">Select variant to obtain location below</string>
     <string name="action_start">Start</string>
     <string name="action_stop">Stop</string>
     <string name="info_stopped">Stopped</string>
